@@ -33,6 +33,7 @@ import de.danoeh.antennapod.core.storage.APNullCleanupAlgorithm;
 import de.danoeh.antennapod.core.storage.APQueueCleanupAlgorithm;
 import de.danoeh.antennapod.core.storage.EpisodeCleanupAlgorithm;
 import de.danoeh.antennapod.core.util.Converter;
+import de.danoeh.antennapod.core.util.LogToFile;
 
 /**
  * Provides access to preferences set by the user in the settings screen. A
@@ -779,7 +780,7 @@ public class UserPreferences {
 
     public static void restartUpdateAlarm(boolean now) {
         int[] timeOfDay = getUpdateTimeOfDay();
-        Log.d(TAG, "timeOfDay: " + Arrays.toString(timeOfDay));
+        LogToFile.d(context, TAG, "restartUpdateAlarm(). now: " + now + ", timeOfDay: " + Arrays.toString(timeOfDay));
         if (timeOfDay.length == 2) {
             restartUpdateTimeOfDayAlarm(timeOfDay[0], timeOfDay[1]);
         } else {
@@ -796,7 +797,7 @@ public class UserPreferences {
      * Sets the interval in which the feeds are refreshed automatically
      */
     private static void restartUpdateIntervalAlarm(long triggerAtMillis, long intervalMillis) {
-        Log.d(TAG, "Restarting update alarm.");
+        LogToFile.d(context, TAG, "Restarting update alarm. - interval based");
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         Intent intent = new Intent(context, FeedUpdateReceiver.class);
         PendingIntent updateIntent = PendingIntent.getBroadcast(context, 0, intent, 0);
@@ -805,9 +806,9 @@ public class UserPreferences {
             alarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP,
                     SystemClock.elapsedRealtime() + triggerAtMillis,
                     updateIntent);
-            Log.d(TAG, "Changed alarm to new interval " + TimeUnit.MILLISECONDS.toHours(intervalMillis) + " h");
+            LogToFile.d(context, TAG, "Changed alarm to new interval " + TimeUnit.MILLISECONDS.toHours(intervalMillis) + " h");
         } else {
-            Log.d(TAG, "Automatic update was deactivated");
+            LogToFile.d(context, TAG, "Automatic update was deactivated");
         }
     }
 
@@ -815,7 +816,7 @@ public class UserPreferences {
      * Sets time of day the feeds are refreshed automatically
      */
     private static void restartUpdateTimeOfDayAlarm(int hoursOfDay, int minute) {
-        Log.d(TAG, "Restarting update alarm.");
+        LogToFile.d(context, TAG, "Restarting update alarm. - time of day based");
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         PendingIntent updateIntent = PendingIntent.getBroadcast(context, 0,
                 new Intent(context, FeedUpdateReceiver.class), 0);
@@ -832,7 +833,7 @@ public class UserPreferences {
         alarmManager.set(AlarmManager.RTC_WAKEUP,
                 alarm.getTimeInMillis(),
                 updateIntent);
-        Log.d(TAG, "Changed alarm to new time of day " + hoursOfDay + ":" + minute);
+        LogToFile.d(context, TAG, "Changed alarm to new time of day " + hoursOfDay + ":" + minute);
     }
 
     /**
