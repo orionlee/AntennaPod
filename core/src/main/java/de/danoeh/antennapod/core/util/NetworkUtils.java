@@ -22,7 +22,6 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import rx.Observable;
-import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
@@ -86,11 +85,21 @@ public class NetworkUtils {
     public static boolean networkAvailable() {
         ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo info = cm.getActiveNetworkInfo();
+        if (info != null) {
+            LogToFile.d(context, TAG, "networkAvailable() - active network - connected: " + info.isConnected() + ", info: " + info);
+        } else {
+            LogToFile.d(context, TAG, "networkAvailable() - active network is null");
+        }
         return info != null && info.isConnected();
     }
 
 	public static boolean isDownloadAllowed() {
-		return UserPreferences.isAllowMobileUpdate() || !NetworkUtils.isNetworkMetered();
+	    boolean allowMobileUpdate = UserPreferences.isAllowMobileUpdate();
+	    boolean networkMetered = NetworkUtils.isNetworkMetered();
+	    boolean res = allowMobileUpdate || !networkMetered;
+	    LogToFile.d(context, TAG, "isDownloadAllowed() " + res
+                + " [ allowMobileUpdate: " + allowMobileUpdate + " , networkMetered: " + networkMetered + " ]");
+	    return res;
 	}
 
 	private static boolean isNetworkMetered() {
