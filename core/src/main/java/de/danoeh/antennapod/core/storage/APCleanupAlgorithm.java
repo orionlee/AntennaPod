@@ -13,6 +13,7 @@ import java.util.concurrent.ExecutionException;
 
 import de.danoeh.antennapod.core.feed.FeedItem;
 import de.danoeh.antennapod.core.feed.FeedMedia;
+import de.danoeh.antennapod.core.util.LogToFile;
 
 /**
  * Implementation of the EpisodeCleanupAlgorithm interface used by AntennaPod.
@@ -32,12 +33,12 @@ public class APCleanupAlgorithm extends EpisodeCleanupAlgorithm {
      */
     public int getReclaimableItems()
     {
-        return getCandidates().size();
+        return getCandidates(null).size();
     }
 
     @Override
     public int performCleanup(Context context, int numberOfEpisodesToDelete) {
-        List<FeedItem> candidates = getCandidates();
+        List<FeedItem> candidates = getCandidates(context); // Temporary hack for debug trace
         List<FeedItem> delete;
 
         Collections.sort(candidates, (lhs, rhs) -> {
@@ -70,7 +71,7 @@ public class APCleanupAlgorithm extends EpisodeCleanupAlgorithm {
         int counter = delete.size();
 
 
-        Log.i(TAG, String.format(
+        LogToFile.d(context, TAG, String.format(
                 "Auto-delete deleted %d episodes (%d requested)", counter,
                 numberOfEpisodesToDelete));
 
@@ -78,11 +79,15 @@ public class APCleanupAlgorithm extends EpisodeCleanupAlgorithm {
     }
 
     @NonNull
-    private List<FeedItem> getCandidates() {
+    private List<FeedItem> getCandidates(Context context) { // Context for debug. A temporary hack
         List<FeedItem> candidates = new ArrayList<>();
         List<FeedItem> downloadedItems = DBReader.getDownloadedItems();
         Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.DAY_OF_MONTH, -1 * numberOfDaysAfterPlayback);
+        if (7 == numberOfDaysAfterPlayback ) {
+            cal.add(Calendar.HOUR_OF_DAY, -1 * 12); // Experiment: episode cleanup with 12 hours, overriding 7 day cleanup option as a temporary hack .
+        } else {
+            cal.add(Calendar.DAY_OF_MONTH, -1 * numberOfDaysAfterPlayback);
+        }
         Date mostRecentDateForDeletion = cal.getTime();
         for (FeedItem item : downloadedItems) {
             if (item.hasMedia()
@@ -93,11 +98,29 @@ public class APCleanupAlgorithm extends EpisodeCleanupAlgorithm {
                 FeedMedia media = item.getMedia();
                 // make sure this candidate was played at least the proper amount of days prior
                 // to now
+                ///LogToFile.d(context, TAG, "Potential item to delete: [" + item.getTitle() + ", " + media.getPlaybackCompletionDate() + "]");
+                
                 if (media != null
                         && media.getPlaybackCompletionDate() != null
                         && media.getPlaybackCompletionDate().before(mostRecentDateForDeletion)) {
                     candidates.add(item);
                 }
+            }
+        }
+        { // log candidate list for detail debug tracing
+            StringBuilder sb = new StringBuilder();
+            sb.append("Cleanup episodes - mostRecentDateForDeletion: ");
+            sb.append(mostRecentDateForDeletion);
+            sb.append(" candidates: [ ");
+            for (FeedItem item : candidates) {
+                sb.append(String.format("\n  %s (%s) on %s",
+                        item.getTitle(), item.getFeed().getTitle(), item.getMedia().getPlaybackCompletionDate()));
+            }
+            sb.append("\n]");
+            if (context != null) {
+                LogToFile.d(context, TAG, sb.toString());
+            } else {
+                Log.d(TAG, sb.toString());
             }
         }
         return candidates;
