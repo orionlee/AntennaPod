@@ -3,6 +3,7 @@ package de.danoeh.antennapod.core.receiver;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
 
 import de.danoeh.antennapod.core.ClientConfig;
 import de.danoeh.antennapod.core.preferences.UserPreferences;
@@ -27,7 +28,8 @@ public class FeedUpdateReceiver extends BroadcastReceiver {
         //
         // Still run network tests to log the network conditions.
         // For production, consider to retry upon network is available
-        NetworkUtils.networkAvailable(); NetworkUtils.isDownloadAllowed();
+        boolean networkAvailable = NetworkUtils.networkAvailable();
+        NetworkUtils.isDownloadAllowed();
         if (true) { // Note: for production NetworkUtils.isDownloadAllowed() should always be checked.
             LogToFile.d(context, TAG, "Automatic feed update: starting, ignoring network availability");
             DBTasks.refreshAllFeeds(context, null);
@@ -35,6 +37,13 @@ public class FeedUpdateReceiver extends BroadcastReceiver {
             LogToFile.d(context, TAG, "Blocking automatic update: no wifi available / no mobile updates allowed");
         }
         UserPreferences.restartUpdateAlarm(false);
+
+        if (!networkAvailable) {
+            LogToFile.d(context, TAG, "Network seems to be unavailable. Investigate if network remains disconnected in next few seconds");
+            new Handler().postDelayed(NetworkUtils::networkAvailable, 2000);
+            new Handler().postDelayed(NetworkUtils::networkAvailable, 4000);
+            new Handler().postDelayed(NetworkUtils::networkAvailable, 6000);
+        }
     }
 
 }
