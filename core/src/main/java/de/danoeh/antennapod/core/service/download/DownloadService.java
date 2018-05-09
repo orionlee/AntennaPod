@@ -7,8 +7,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.os.Binder;
 import android.os.Build;
@@ -76,6 +74,7 @@ import de.danoeh.antennapod.core.syndication.handler.UnsupportedFeedtypeExceptio
 import de.danoeh.antennapod.core.util.ChapterUtils;
 import de.danoeh.antennapod.core.util.DownloadError;
 import de.danoeh.antennapod.core.util.InvalidFeedException;
+import de.danoeh.antennapod.core.util.LogToFile;
 import de.greenrobot.event.EventBus;
 
 /**
@@ -335,6 +334,7 @@ public class DownloadService extends Service {
         }
 
         // start auto download in case anything new has shown up
+        LogToFile.d(this.getApplicationContext(), TAG, "Auto download media upon onDestroy()");
         DBTasks.autodownloadUndownloadedItems(getApplicationContext());
     }
 
@@ -535,7 +535,6 @@ public class DownloadService extends Service {
      * Check if there's something else to download, otherwise stop
      */
     private void queryDownloads() {
-        Log.d(TAG, numberOfDownloads.get() + " downloads left");
 
         if (numberOfDownloads.get() <= 0 && DownloadRequester.getInstance().hasNoDownloads()) {
             Log.d(TAG, "Number of downloads is " + numberOfDownloads.get() + ", attempting shutdown");
