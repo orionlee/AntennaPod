@@ -21,8 +21,15 @@ public class FeedUpdateReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         LogToFile.d(context, TAG, "Received intent");
         ClientConfig.initialize(context);
-        if (NetworkUtils.networkAvailable() && NetworkUtils.isDownloadAllowed()) {
-            LogToFile.d(context, TAG, "Automatic feed update: starting, network available");
+
+        // Experiment: always refresh, even network is not available, to see how it fares
+        // against cases that network is only temporarily down.
+        //
+        // Still run network tests to log the network conditions.
+        // For production, consider to retry upon network is available
+        NetworkUtils.networkAvailable(); NetworkUtils.isDownloadAllowed();
+        if (true) { // Note: for production NetworkUtils.isDownloadAllowed() should always be checked.
+            LogToFile.d(context, TAG, "Automatic feed update: starting, ignoring network availability");
             DBTasks.refreshAllFeeds(context, null);
         } else {
             LogToFile.d(context, TAG, "Blocking automatic update: no wifi available / no mobile updates allowed");
