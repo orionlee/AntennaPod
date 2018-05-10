@@ -32,7 +32,7 @@ public class FeedUpdateReceiver extends BroadcastReceiver {
         Runnable doRefreshAllFeedsIfDownloadAllowed = () -> refreshAllFeedsIfDownloadAllowed(context);
         ConditionalRetryExecutor.executeWhenConditionMet(NetworkUtils::networkAvailable,
                 doRefreshAllFeedsIfDownloadAllowed,
-                () -> OnNetworkAvailableOneTimeExecutor.execute(context.getApplicationContext(), // MUST supply application context, receiver's own context is now allowed to be used.
+                () -> OnNetworkAvailableOneTimeExecutor.execute(context,
                         doRefreshAllFeedsIfDownloadAllowed),
                 5000,
         "Network available?",
@@ -132,7 +132,9 @@ class OnNetworkAvailableOneTimeExecutor {
 
             BroadcastReceiver receiver = new OnNetworkAvailableOneTimeReceiver(callable);
             IntentFilter intentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
-            context.registerReceiver(receiver, intentFilter);
+            // Use application Context for receiver registration, as some context
+            // (such as BroadReceiver) cannot register receivers.
+            context.getApplicationContext().registerReceiver(receiver, intentFilter);
         }
 
         @Override
@@ -157,7 +159,7 @@ class OnNetworkAvailableOneTimeExecutor {
                 Log.e(TAG, "Unexpected error in executing the logic. ", e); // No retry upon exception
             } finally {
                 LogToFile.d(context, TAG, "Supplied logic executed - Now un-registering network change receiver");
-                context.unregisterReceiver(this);
+                context.getApplicationContext().unregisterReceiver(this);
             }
         }
     }
