@@ -8,6 +8,8 @@ import android.net.ConnectivityManager;
 import android.os.Handler;
 import android.util.Log;
 
+import java.util.concurrent.Callable;
+
 import de.danoeh.antennapod.core.ClientConfig;
 import de.danoeh.antennapod.core.preferences.UserPreferences;
 import de.danoeh.antennapod.core.storage.DBTasks;
@@ -26,41 +28,75 @@ public class FeedUpdateReceiver extends BroadcastReceiver {
         LogToFile.d(context, TAG, "Received intent");
         ClientConfig.initialize(context);
 
-        // Experiment: always refresh, even network is not available, to see how it fares
-        // against cases that network is only temporarily down.
-        //
-        // Still run network tests to log the network conditions.
-        // For production, consider to retry upon network is available
-        boolean networkAvailable = NetworkUtils.networkAvailable();
-        NetworkUtils.isDownloadAllowed();
-        if (true) { // Note: for production NetworkUtils.isDownloadAllowed() should always be checked.
-            LogToFile.d(context, TAG, "Automatic feed update: starting, ignoring network availability");
-            DBTasks.refreshAllFeeds(context, null);
-        } else {
-            LogToFile.d(context, TAG, "Blocking automatic update: no wifi available / no mobile updates allowed");
-        }
+        // Do automatic feed update, with logic handling network stability
+        Runnable doRefreshAllFeedsIfDownloadAllowed = () -> refreshAllFeedsIfDownloadAllowed(context);
+        ConditionalRetryExecutor.executeWhenConditionMet(NetworkUtils::networkAvailable,
+                doRefreshAllFeedsIfDownloadAllowed,
+                () -> OnNetworkAvailableOneTimeExecutor.execute(context.getApplicationContext(), // MUST supply application context, receiver's own context is now allowed to be used.
+                        doRefreshAllFeedsIfDownloadAllowed),
+                5000,
+        "Network available?",
+                context);
+
         UserPreferences.restartUpdateAlarm(false);
 
-        if (!networkAvailable) {
-            LogToFile.d(context, TAG, "Network seems to be unavailable. Investigate if network remains disconnected in next few seconds");
-            new Handler().postDelayed(NetworkUtils::networkAvailable, 2000);
-            new Handler().postDelayed(NetworkUtils::networkAvailable, 4000);
-            new Handler().postDelayed(NetworkUtils::networkAvailable, 6000);
-
-            // Refresh all feeds once network is available
-            // MUST supply application context, receiver's own context is now allowed to be used.
-            OnNetworkAvailableOneTimeExecutor.execute(context.getApplicationContext(),
-                    () -> refreshAllFeedsIfDownloadAllowed(context));
-        }
     }
 
     private static boolean refreshAllFeedsIfDownloadAllowed(Context context) {
         if (NetworkUtils.isDownloadAllowed()) {
+            LogToFile.d(context, TAG, "Automatic feed update: starting");
             DBTasks.refreshAllFeeds(context, null);
             return true;
         } else {
+            LogToFile.d(context, TAG, "Blocking automatic update:  no mobile / metered network updates allowed");
             return false;
         }
+    }
+}
+
+class ConditionalRetryExecutor {
+    private static String TAG = "ConditionalRetryExecutor";
+
+    /**
+     * If <code>isConditionMet</code> returns true, execute <code>runnable</code>;
+     * otherwise wait for <code>retryWaitMillis</code> and try again.
+     * If the condition is still unmet, execute <code>fallback</code>
+     *
+     */
+    public static void executeWhenConditionMet(Callable<Boolean> isConditionMet,
+                                               Runnable runnable,
+                                               Runnable fallback,
+                                               long retryWaitMillis,
+                                               String conditionDescription,
+                                               Context context) { // Context needed temporarily for LogToFile debug
+        try {
+            if (isConditionMet.call()) {
+                LogToFile.d(context, TAG, logMsg(conditionDescription, "Condition met."));
+                runnable.run();
+                return;
+            } else {
+                new Handler().postDelayed(() -> {
+                    try {
+                        if (isConditionMet.call()) {
+                            LogToFile.d(context, TAG, logMsg(conditionDescription, "In retry: Condition now met."));
+                            runnable.run();
+                        } else {
+                            LogToFile.d(context, TAG, logMsg(conditionDescription,"In retry: Condition still unmet. Execute fallback."));
+                            fallback.run();
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "executeWhenConditionMet() encounters unexpected exception during retry", e);
+                    }
+                }, retryWaitMillis);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "executeWhenConditionMet() encounters unexpected exception", e);
+            return;
+        }
+    }
+
+    private static String logMsg(String logMsgPrefix, String msg) {
+        return String.format("[%s] %s", logMsgPrefix, msg);
     }
 }
 
