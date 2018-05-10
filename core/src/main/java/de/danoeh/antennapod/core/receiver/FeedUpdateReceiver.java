@@ -8,8 +8,6 @@ import android.net.ConnectivityManager;
 import android.os.Handler;
 import android.util.Log;
 
-import java.util.concurrent.Callable;
-
 import de.danoeh.antennapod.core.ClientConfig;
 import de.danoeh.antennapod.core.preferences.UserPreferences;
 import de.danoeh.antennapod.core.storage.DBTasks;
@@ -51,7 +49,7 @@ public class FeedUpdateReceiver extends BroadcastReceiver {
 
             // Refresh all feeds once network is available
             // MUST supply application context, receiver's own context is now allowed to be used.
-            OnNetworkAvailableOneTimeReceiver.run(context.getApplicationContext(),
+            OnNetworkAvailableOneTimeExecutor.execute(context.getApplicationContext(),
                     () -> refreshAllFeedsIfDownloadAllowed(context));
         }
     }
@@ -66,60 +64,64 @@ public class FeedUpdateReceiver extends BroadcastReceiver {
     }
 }
 
-class OnNetworkAvailableOneTimeReceiver extends BroadcastReceiver {
-
-    private static final String TAG = "OnNetAvailOneTimeRcvr";
-
-    private final Callable<Boolean> callable;
+class OnNetworkAvailableOneTimeExecutor {
 
     /**
+     * Execute the supplied logic when network is available
      *
      * @param context
-     * @param callable the logic to be executed when network is available. It returns true upon success,
-     *                 false if the execution does not complete, and wishes to retry
-     *                 when network is available again.
-     *                 For example, the logic refuses to run on a metered network.
+     * @param runnable the logic to be executed when network is available.
      */
-    public static void run(Context context, Callable<Boolean> callable) {
-        // OPEN: consider to avoid run() being called repeatedly (before network becomes available)
-        LogToFile.d(context, TAG, "run() - registering network change receiver");
-
-        BroadcastReceiver receiver = new OnNetworkAvailableOneTimeReceiver (callable);
-        IntentFilter intentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
-        context.registerReceiver(receiver, intentFilter);
+    public static void execute(Context context, Runnable runnable) {
+        // Hide ConnectivityManager.CONNECTIVITY_ACTION Broadcast implementation from caller
+        // It might need to be changed as CONNECTIVITY_ACTION is deprecated in Android P
+        // The recommended ones require API level >= 21 so the Broadcast-based implementation
+        // is still needed anyway.
+        OnNetworkAvailableOneTimeReceiver.execute(context, runnable);
     }
+    
+    private static class OnNetworkAvailableOneTimeReceiver extends BroadcastReceiver {
 
-    private OnNetworkAvailableOneTimeReceiver(Callable<Boolean> callable) {
-        this.callable = callable;
-    }
-
-    @Override
-    public void onReceive(Context context, Intent intent) {
-        LogToFile.d(context, TAG, "onReceive() - intent: " + intent);
-        // verify intent is for network availability
-        if (intent == null && !ConnectivityManager.CONNECTIVITY_ACTION.equals(intent.getAction())) {
-            LogToFile.d(context, TAG, "Not a connectivity change intent. Do nothing");
-            return;
+        private static final String TAG = "OnNetAvailOneTimeRcvr";
+        
+        private final Runnable runnable;
+        
+        private OnNetworkAvailableOneTimeReceiver(Runnable runnable) {
+            this.runnable = runnable;
         }
 
-        // Network not available (probably a broadcast of disconnect), ignore
-        if (!NetworkUtils.networkAvailable()) {
-            LogToFile.d(context, TAG, "No network available. Do nothing");
-            return;
+        public static void execute(Context context, Runnable callable) {
+            // OPEN: consider to avoid execute() being called repeatedly (before network becomes available)
+            LogToFile.d(context, TAG, "execute() - registering network change receiver");
+
+            BroadcastReceiver receiver = new OnNetworkAvailableOneTimeReceiver(callable);
+            IntentFilter intentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+            context.registerReceiver(receiver, intentFilter);
         }
 
-        boolean success = true;
-        try {
-            LogToFile.d(context, TAG, "Network available - execute supplied logic");
-            success = callable.call();
-        } catch (Exception e) {
-            Log.e(TAG, "Unexpected error in executing the logic. ", e); // No retry with exception
-        } finally {
-            if (success) {
-                LogToFile.d(context, TAG, "Supplied logic executed successfully - Now un-registering network change receiver");
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            LogToFile.d(context, TAG, "onReceive() - intent: " + intent);
+            // verify intent is for network availability
+            if (intent == null && !ConnectivityManager.CONNECTIVITY_ACTION.equals(intent.getAction())) {
+                LogToFile.d(context, TAG, "Not a connectivity change intent. Do nothing");
+                return;
+            }
+
+            // Network not available (probably a broadcast of disconnect), ignore
+            if (!NetworkUtils.networkAvailable()) {
+                LogToFile.d(context, TAG, "No network available yet. Do nothing");
+                return;
+            }
+
+            try {
+                LogToFile.d(context, TAG, "Network available - execute supplied logic");
+                runnable.run();
+            } catch (Exception e) {
+                Log.e(TAG, "Unexpected error in executing the logic. ", e); // No retry upon exception
+            } finally {
+                LogToFile.d(context, TAG, "Supplied logic executed - Now un-registering network change receiver");
                 context.unregisterReceiver(this);
-            } else {
-                LogToFile.d(context, TAG, "Supplied logic executed unsuccessfully - Retry when network is available again");
             }
         }
     }
