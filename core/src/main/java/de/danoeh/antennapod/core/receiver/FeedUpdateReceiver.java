@@ -5,7 +5,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
+import android.net.LinkProperties;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkInfo;
+import android.os.Build;
 import android.os.Handler;
+import android.support.annotation.RequiresApi;
 import android.util.Log;
 
 import java.util.concurrent.Callable;
@@ -113,9 +119,99 @@ class OnNetworkAvailableOneTimeExecutor {
         // It might need to be changed as CONNECTIVITY_ACTION is deprecated in Android P
         // The recommended ones require API level >= 21 so the Broadcast-based implementation
         // is still needed anyway.
-        OnNetworkAvailableOneTimeReceiver.execute(context, runnable);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            OnNetworkAvailableOneTimeCallback.execute(context, runnable);
+        } else {
+            OnNetworkAvailableOneTimeReceiver.execute(context, runnable);
+        }
     }
-    
+
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    private static class OnNetworkAvailableOneTimeCallback extends ConnectivityManager.NetworkCallback {
+
+        private static final String TAG = "OnNetAvailOneTimeCB";
+
+        private final Runnable runnable;
+        private final Context context; // for debug only
+
+        private OnNetworkAvailableOneTimeCallback(Runnable runnable, Context context) {
+            this.runnable = runnable;
+            this.context = context;
+        }
+
+        public static void execute(Context context, Runnable runnable) {
+            OnNetworkAvailableOneTimeCallback callback =
+                    new OnNetworkAvailableOneTimeCallback(runnable, context);
+
+            ConnectivityManager connManager = getConnectivityManager(context);
+
+            connManager.registerDefaultNetworkCallback(callback); // requires (api = Build.VERSION_CODES.N)
+        }
+
+        private static ConnectivityManager getConnectivityManager(Context context) {
+            return (ConnectivityManager) context
+                    .getSystemService(Context.CONNECTIVITY_SERVICE);
+        }
+
+        private NetworkInfo getNetworkInfo(Network network) {
+            return getConnectivityManager(context).getNetworkInfo(network);
+        }
+        
+        @Override
+        public void onAvailable(Network network) {
+            super.onAvailable(network);
+            LogToFile.d(context, TAG, "onAvailable() network: " + getNetworkInfo(network));
+
+            // Network still not available for some reason
+            if (!NetworkUtils.networkAvailable()) {
+                LogToFile.d(context, TAG, "No network available yet. Do nothing");
+                return;
+            }
+
+            try {
+                LogToFile.d(context, TAG, "Network available - execute supplied logic");
+                runnable.run();
+            } catch (Exception e) {
+                Log.e(TAG, "Unexpected error in executing the logic. ", e); // No retry upon exception
+            } finally {
+                LogToFile.d(context, TAG, "Supplied logic executed - Now un-registering network change callback");
+                getConnectivityManager(context).unregisterNetworkCallback(this);
+            }
+
+        }
+
+        @Override
+        public void onLosing(Network network, int maxMsToLive) {
+            super.onLosing(network, maxMsToLive);
+            LogToFile.d(context, TAG, "onLosing() network: " + getNetworkInfo(network) + " , maxMsToLive: " + maxMsToLive);
+        }
+
+        @Override
+        public void onLost(Network network) {
+            super.onLost(network);
+            LogToFile.d(context, TAG, "onLost() network: " + getNetworkInfo(network));
+        }
+
+        @Override
+        public void onUnavailable() {
+            super.onUnavailable();
+            LogToFile.d(context, TAG, "onUnavailable()");
+        }
+
+        @Override
+        public void onCapabilitiesChanged(Network network, NetworkCapabilities networkCapabilities) {
+            super.onCapabilitiesChanged(network, networkCapabilities);
+            LogToFile.d(context, TAG, "onCapabilitiesChanged(): network: " + getNetworkInfo(network) + " , capabilities: " + networkCapabilities);
+        }
+
+        @Override
+        public void onLinkPropertiesChanged(Network network, LinkProperties linkProperties) {
+            super.onLinkPropertiesChanged(network, linkProperties);
+            LogToFile.d(context, TAG, "onLinkPropertiesChanged() " + network + " , properties: " + linkProperties);
+        }
+    }
+
     private static class OnNetworkAvailableOneTimeReceiver extends BroadcastReceiver {
 
         private static final String TAG = "OnNetAvailOneTimeRcvr";
