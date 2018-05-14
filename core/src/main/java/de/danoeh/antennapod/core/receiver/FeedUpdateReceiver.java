@@ -21,15 +21,21 @@ public class FeedUpdateReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         Log.d(TAG, "Received intent");
         ClientConfig.initialize(context);
-        if (NetworkUtils.networkAvailable() && NetworkUtils.isDownloadAllowed()) {
-            DBTasks.refreshAllFeeds(context, null);
-        } else if (NetworkUtils.networkProbablyConnected() && NetworkUtils.isDownloadAllowed()){
+        if (NetworkUtils.networkAvailable()) {
+            refreshAllFeedsIfDownloadAllowed(context);
+        } else if (NetworkUtils.networkProbablyConnected()){
             Log.d(TAG, "Workaround for #2691: Android probably incorrectly reports network disconnected. Treat the network is connected and proceed to refresh feeds.");
-            DBTasks.refreshAllFeeds(context, null);
+            refreshAllFeedsIfDownloadAllowed(context);
         } else {
             Log.d(TAG, "Blocking automatic update: no wifi available / no mobile updates allowed");
         }
         UserPreferences.restartUpdateAlarm(false);
+    }
+
+    private static void refreshAllFeedsIfDownloadAllowed(Context context) {
+        if (NetworkUtils.isDownloadAllowed()) {
+            DBTasks.refreshAllFeeds(context, null);
+        }
     }
 
 }
