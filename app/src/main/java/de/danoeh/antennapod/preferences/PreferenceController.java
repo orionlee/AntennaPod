@@ -3,6 +3,7 @@ package de.danoeh.antennapod.preferences;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.app.TimePickerDialog;
 import android.content.ActivityNotFoundException;
@@ -17,6 +18,9 @@ import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.IdRes;
+import android.support.annotation.NonNull;
+import android.support.annotation.PluralsRes;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.FileProvider;
@@ -32,7 +36,14 @@ import android.text.Html;
 import android.text.format.DateFormat;
 import android.text.format.DateUtils;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.Spinner;
 import android.widget.Toast;
 
 import com.afollestad.materialdialogs.MaterialDialog;
@@ -169,7 +180,6 @@ public class PreferenceController implements SharedPreferences.OnSharedPreferenc
                 setupAutoDownloadScreen();
                 buildAutodownloadSelectedNetworsPreference();
                 setSelectedNetworksEnabled(UserPreferences.isEnableAutodownloadWifiFilter());
-                buildEpisodeCleanupPreference();
                 break;
             case R.xml.preferences_playback:
                 setupPlaybackScreen();
@@ -451,6 +461,13 @@ public class PreferenceController implements SharedPreferences.OnSharedPreferenc
                             return true;
                         }
                 );
+
+        ui.findPreference(UserPreferences.PREF_EPISODE_CLEANUP)
+                .setOnPreferenceClickListener(preference -> {
+                    showEpisodeCleanupPreferencesDialog();
+                    return true;
+                });
+
     }
 
     private void setupNetworkScreen() {
@@ -1188,6 +1205,288 @@ public class PreferenceController implements SharedPreferences.OnSharedPreferenc
             setUpdateIntervalText();
         });
         builder.show();
+    }
+
+    // EPISODE CLEANUP DIALOG
+
+    private void showEpisodeCleanupPreferencesDialog() {
+        new EpisodeCleanupOptionsDialogCreator(ui.getActivity(),
+                ui.getActivity().getResources().getStringArray(R.array.episode_cleanup_values),
+                UserPreferences.getEpisodeCleanupValue(),
+                (newVal) -> {
+                    UserPreferences.setEpisodeCleanupValue(newVal);
+                }).showDialog();
+    }
+
+
+    private static class EpisodeCleanupOptionsDialogCreator {
+
+        public static interface OnSelectedListener {
+            void onSelected(float valueInNumDays);
+        }
+
+        @NonNull
+        private final Context context;
+
+        @NonNull
+        private LayoutInflater layoutInflater;
+
+        @NonNull
+        private final EpisodeCleanupOptions options;
+
+        private final float curValue;
+
+        @NonNull
+        private final OnSelectedListener selectedCallback;
+
+        public EpisodeCleanupOptionsDialogCreator(@NonNull Activity activity,
+                                                  @NonNull String[] options,
+                                                  float curValue,
+                                                  @NonNull OnSelectedListener selectedCallback) {
+            this.context = activity;
+            this.layoutInflater = activity.getLayoutInflater();
+            this.options = new EpisodeCleanupOptions(options);
+            this.curValue = curValue;
+            this.selectedCallback = selectedCallback;
+        }
+
+        public void showDialog() {
+
+            // 1. Bind the options / values to the main RadioGroup UI
+
+            RadioGroup radioGroup = (RadioGroup)layoutInflater.
+                    inflate(R.layout.episode_cleanup_dialog, null, false);
+
+            RadioButton notInQueueRadioButton = radioGroup.findViewById(R.id.radio_episode_cleanup_not_in_queue);
+            notInQueueRadioButton.setVisibility(toVisibility(options.hasNotInQueue()));
+
+            RadioButton immeidateRadioButton = radioGroup.findViewById(R.id.radio_episode_cleanup_immediate);
+            immeidateRadioButton.setVisibility(toVisibility(options.hasImmediate()));
+
+            RadioButton neverRadioButton =  radioGroup.findViewById(R.id.radio_episode_cleanup_never);
+            neverRadioButton.setVisibility(toVisibility(options.hasNever()));
+
+            RadioButton hoursRadioButton = findRadioButtonById(radioGroup, R.id.radio_episode_cleanup_hours_after);
+            Spinner hoursSpinner = radioGroup.findViewById(R.id.spinner_episode_cleanup_hours_after);
+            ArrayAdapter<CharSequence> hoursSpinnerAdapter =
+                    new ArrayAdapter<CharSequence>(context,
+                            R.layout.episode_cleanup_spinner_item,
+                            getQuantityStrings(R.plurals.episode_cleanup_hours_after_listening,
+                                    options.getHoursAfterOptions()));
+            hoursSpinner.setAdapter(hoursSpinnerAdapter);
+
+            RadioButton daysRadioButton = findRadioButtonById(radioGroup, R.id.radio_episode_cleanup_days_after);
+            Spinner daysSpinner = radioGroup.findViewById(R.id.spinner_episode_cleanup_days_after);
+            ArrayAdapter<CharSequence> daysSpinnerAdapter =
+                    new ArrayAdapter<CharSequence>(context,
+                            R.layout.episode_cleanup_spinner_item,
+                            getQuantityStrings(R.plurals.episode_cleanup_days_after_listening,
+                                    options.getDaysAfterOptions()));
+            daysSpinner.setAdapter(daysSpinnerAdapter);
+
+            setSelected(radioGroup); // MUST be done BEFORE selection listeners are bound below
+
+
+            // 2. Main UI view prepared. create the dialog object
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(context)
+                    .setTitle("Episode Cleanup")
+                    .setView(radioGroup)
+                    .setNegativeButton("Cancel", null);
+            final AlertDialog dialog = builder.create();
+
+
+            // 3. Binds the listeners for selection. They need a reference to the dialog
+
+            notInQueueRadioButton.setOnClickListener(
+                    new ReturnConstantOnClickListener(dialog, UserPreferences.EPISODE_CLEANUP_QUEUE));
+            immeidateRadioButton.setOnClickListener(
+                    new ReturnConstantOnClickListener(dialog, UserPreferences.EPISODE_CLEANUP_DEFAULT));
+            neverRadioButton.setOnClickListener(
+                    new ReturnConstantOnClickListener(dialog, UserPreferences.EPISODE_CLEANUP_NULL));
+
+            Runnable hoursSelectedCallback = () -> {
+                int numHours = options.getHoursAfterOptions().get(hoursSpinner.getSelectedItemPosition());
+                selectedCallback.onSelected(EpisodeCleanupOptions.numHoursIntToNumDaysFloat(numHours));
+                dialog.dismiss();
+            };
+            hoursRadioButton.setOnClickListener( v -> hoursSelectedCallback.run() );
+            hoursSpinner.setOnItemSelectedListener(new SkipInitialOnItemSelectedListener(hoursSelectedCallback));
+
+            Runnable daysSelectedCallback = () -> {
+                int numDays = options.getDaysAfterOptions().get(daysSpinner.getSelectedItemPosition());
+                selectedCallback.onSelected(numDays);
+                dialog.dismiss();
+            };
+            daysRadioButton.setOnClickListener(v -> daysSelectedCallback.run());
+            daysSpinner.setOnItemSelectedListener(new SkipInitialOnItemSelectedListener(daysSelectedCallback));
+
+
+            // 4. Dialog building complete. show the dialog
+            dialog.show();
+        }
+
+        private static class SkipInitialOnItemSelectedListener implements AdapterView.OnItemSelectedListener {
+            private boolean isInitial = true;
+
+            @NonNull
+            private final Runnable onSelectedCallback;
+
+            public SkipInitialOnItemSelectedListener(@NonNull Runnable onSelectedCallback) {
+                this.onSelectedCallback = onSelectedCallback;
+            }
+
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (isInitial) { // skip initial call by system upon drawing the widget
+                    isInitial = false;
+                    return;
+                }
+                onSelectedCallback.run();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        }
+
+        private class ReturnConstantOnClickListener implements View.OnClickListener {
+            private final @NonNull Dialog dialog;
+            private final int value;
+
+            public ReturnConstantOnClickListener(@NonNull Dialog dialog, @NonNull int value) {
+                this.dialog = dialog;
+                this.value = value;
+            }
+
+            @Override
+            public void onClick(View v) {
+                selectedCallback.onSelected(value);
+                dialog.dismiss();
+            }
+        }
+
+        private void setSelected(@NonNull View optionsView) {
+            // Based on member curValue, set the one selected in the UI
+            if (UserPreferences.EPISODE_CLEANUP_QUEUE == curValue) {
+                findRadioButtonById(optionsView, R.id.radio_episode_cleanup_not_in_queue).setChecked(true);
+            } else if (UserPreferences.EPISODE_CLEANUP_DEFAULT == curValue) {
+                findRadioButtonById(optionsView, R.id.radio_episode_cleanup_immediate).setChecked(true);
+            } else if (UserPreferences.EPISODE_CLEANUP_NULL == curValue) {
+                findRadioButtonById(optionsView, R.id.radio_episode_cleanup_never).setChecked(true);
+            } else if (0 < curValue && curValue < 1) {
+                findRadioButtonById(optionsView, R.id.radio_episode_cleanup_hours_after).setChecked(true);
+                int numHours = EpisodeCleanupOptions.numDaysFloatToNumHoursInt(curValue);
+                int curValueIdx = options.getHoursAfterOptions().indexOf(numHours);
+                if (curValueIdx >= 0 ) {
+                    findSpinnerById(optionsView, R.id.spinner_episode_cleanup_hours_after).setSelection(curValueIdx);
+                }
+            } else if (1 <= curValue) {
+                findRadioButtonById(optionsView, R.id.radio_episode_cleanup_days_after).setChecked(true);
+                int numDays =  EpisodeCleanupOptions.numDaysFloatToNumDaysInt(curValue);
+                int curValueIdx = options.getDaysAfterOptions().indexOf(numDays);
+                if (curValueIdx >= 0 ) {
+                    findSpinnerById(optionsView, R.id.spinner_episode_cleanup_days_after).setSelection(curValueIdx);
+                }
+            } else {
+                Log.w(TAG, "EpisodeCleanupOptionsDialogCreator.showDialog() existing episode clean up value <" + curValue + "> not in the available values list.");
+            }
+
+        }
+
+        private RadioButton findRadioButtonById(@NonNull View view, @IdRes int id) {
+            return (RadioButton)view.findViewById(id);
+        }
+
+        private Spinner findSpinnerById(@NonNull View view, @IdRes int id) {
+            return (Spinner)view.findViewById(id);
+        }
+
+        // @View.Visibility
+        private static int toVisibility(boolean enabled) {
+            return enabled ? View.VISIBLE : View.GONE;
+        }
+
+        private String[] getQuantityStrings(@PluralsRes int id, List<Integer> quantities) {
+            String res[] = new String[quantities.size()];
+            for (int i = 0; i < res.length; i++) {
+                int vInt = quantities.get(i);
+                res[i] = context.getResources().getQuantityString(id, vInt, vInt);
+            }
+            return res;
+        }
+
+        // Provide a data structure for the option values (in the backend)
+        // that can be used by Dialog implementation easily
+        private static class EpisodeCleanupOptions {
+            private boolean notInQueue;
+            private boolean immediate;
+            private boolean never;
+            private List<Integer> hoursAfterOptions;
+            private List<Integer> daysAfterOptions;
+
+            public EpisodeCleanupOptions(@NonNull String[] optionsInStr) {
+                List<Integer> tmpHoursAfterList = new ArrayList<>();
+                List<Integer> tmpDaysAfterList = new ArrayList<>();
+                notInQueue = false;
+                immediate = false;
+                never = false;
+
+                for (String optValStr : optionsInStr) {
+                    float optVal = Float.parseFloat(optValStr);
+                    if (UserPreferences.EPISODE_CLEANUP_QUEUE == optVal) {
+                        notInQueue = true;
+                    } else if (UserPreferences.EPISODE_CLEANUP_DEFAULT == optVal) {
+                        immediate = true;
+                    } else if (UserPreferences.EPISODE_CLEANUP_NULL == optVal) {
+                        never = true;
+                    } else if (0 < optVal && optVal < 1) {
+                        tmpHoursAfterList.add(numDaysFloatToNumHoursInt(optVal));
+                    } else if (1 <= optVal) {
+                        tmpDaysAfterList.add(numDaysFloatToNumDaysInt(optVal));
+                    } else {
+                        throw new IllegalArgumentException("Cleanup episode options have unsupported value: " + optValStr);
+                    }
+                }
+                hoursAfterOptions = Collections.unmodifiableList(tmpHoursAfterList);
+                daysAfterOptions = Collections.unmodifiableList(tmpDaysAfterList);
+            }
+
+            // Misc. conversion between number of days and number of hours used by Dialog implementation
+
+            public static int numDaysFloatToNumDaysInt(float val) {
+                // ignores cases such as 1.5 days, the dialog does not support those cases
+                return (int)val;
+            }
+
+            public static int numDaysFloatToNumHoursInt(float val) {
+                return Converter.numberOfDaysFloatToNumberOfHours(val);
+            }
+
+            public static float numHoursIntToNumDaysFloat(int numHours) {
+                return (float)Math.floor(1000f * numHours / 24f) / 1000f;
+            }
+
+            public boolean hasNotInQueue() {
+                return notInQueue;
+            }
+
+            public boolean hasImmediate() {
+                return immediate;
+            }
+
+            public boolean hasNever() {
+                return never;
+            }
+
+            public List<Integer> getHoursAfterOptions() {
+                return hoursAfterOptions;
+            }
+
+            public List<Integer> getDaysAfterOptions() {
+                return daysAfterOptions;
+            }
+        }
     }
 
 

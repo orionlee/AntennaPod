@@ -671,8 +671,18 @@ public class UserPreferences {
         }
     }
 
+    public static float getEpisodeCleanupValue() {
+        return Float.parseFloat(prefs.getString(PREF_EPISODE_CLEANUP, "-1"));
+    }
+
+    public static void setEpisodeCleanupValue(float valueInNumDays) {
+        prefs.edit()
+                .putString(PREF_EPISODE_CLEANUP, Float.toString(valueInNumDays))
+                .apply();
+    }
+
     public static EpisodeCleanupAlgorithm getEpisodeCleanupAlgorithm() {
-        float cleanupValue = Float.parseFloat(prefs.getString(PREF_EPISODE_CLEANUP, "-1"));
+        float cleanupValue = getEpisodeCleanupValue();
         if (cleanupValue == EPISODE_CLEANUP_QUEUE) {
             return new APQueueCleanupAlgorithm();
         } else if (cleanupValue == EPISODE_CLEANUP_NULL) {

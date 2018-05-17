@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/radio_group_episode_cleanup"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingLeft="?attr/dialogPreferredPadding"
+    android:paddingStart="?attr/dialogPreferredPadding">
+
+    <!-- To accommodate the long "12 hours after finishing" text with dropdown control,
+         reduce paddingStart to 8dp (from ?attr/dialogPreferredPadding), and
+      -->
+    <RadioButton
+        android:id="@+id/radio_episode_cleanup_not_in_queue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingLeft="8dp"
+        android:paddingStart="8dp"
+        android:layout_marginTop="?attr/dialogPreferredPadding"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:text="@string/episode_cleanup_queue_removal" />
+    <RadioButton
+        android:id="@+id/radio_episode_cleanup_immediate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingLeft="8dp"
+        android:paddingStart="8dp"
+        android:layout_marginTop="?attr/dialogPreferredPadding"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:text="@string/episode_cleanup_after_listening" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="?attr/dialogPreferredPadding"
+        android:orientation="horizontal" >
+        <RadioButton
+            android:id="@+id/radio_episode_cleanup_hours_after"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <Spinner
+            android:id="@+id/spinner_episode_cleanup_hours_after"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingLeft="0dp"
+            android:paddingStart="0dp" />
+        <!-- further reduce paddingStart so that it aligns better with the regular RadioButton items
+             omit paddingEnd to give the UI a bit more space for the dropdown -->
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="?attr/dialogPreferredPadding"
+        android:orientation="horizontal" >
+        <RadioButton
+            android:id="@+id/radio_episode_cleanup_days_after"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <Spinner
+            android:id="@+id/spinner_episode_cleanup_days_after"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingLeft="0dp"
+            android:paddingStart="0dp" />
+        <!-- further reduce paddingStart so that it aligns better with the regular RadioButton items
+             omit paddingEnd to give the UI a bit more space for the dropdown -->
+    </LinearLayout>
+
+    <RadioButton
+        android:id="@+id/radio_episode_cleanup_never"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingLeft="8dp"
+        android:paddingStart="8dp"
+        android:layout_marginTop="?attr/dialogPreferredPadding"
+        android:textAppearance="@android:style/TextAppearance.DeviceDefault.Medium"
+        android:text="@string/episode_cleanup_never" />
+
+</RadioGroup>
