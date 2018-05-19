@@ -3,6 +3,7 @@ package de.danoeh.antennapod.core.receiver;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
 import android.util.Log;
 
 import de.danoeh.antennapod.core.ClientConfig;
@@ -24,8 +25,16 @@ public class FeedUpdateReceiver extends BroadcastReceiver {
         if (NetworkUtils.networkAvailable()) {
             refreshAllFeedsIfDownloadAllowed(context);
         } else if (NetworkUtils.networkProbablyConnected()){
-            Log.d(TAG, "Workaround for #2691: Android probably incorrectly reports network disconnected. Treat the network is connected and proceed to refresh feeds.");
-            refreshAllFeedsIfDownloadAllowed(context);
+            Log.d(TAG, "Workaround for #2691: Android probably incorrectly reports network disconnected. Retry after a few seconds");
+            new Handler().postDelayed(()-> {
+                Log.d(TAG, "  Test network again after some delay.");
+                if (NetworkUtils.networkAvailable()) {
+                    Log.d(TAG, "  In retry: network available. Proceed to refreshAllFeeds");
+                    refreshAllFeedsIfDownloadAllowed(context);
+                } else {
+                    Log.d(TAG, "  In retry: network is still not available. refreshAllFeeds aborted. Details: NetworkUtils.networkProbablyConnected(): " + NetworkUtils.networkProbablyConnected());
+                }
+            }, 5000);
         } else {
             Log.d(TAG, "Blocking automatic update: no wifi available / no mobile updates allowed");
         }
