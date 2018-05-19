@@ -325,7 +325,9 @@ public class DBWriter {
                     ItemEnqueuePositionCalculator positionCalculator =
                             new ItemEnqueuePositionCalculator(
                                     new ItemEnqueuePositionCalculator.Options()
-                                            .setEnqueueAtFront(UserPreferences.enqueueAtFront()));
+                                            .setEnqueueAtFront(UserPreferences.enqueueAtFront())
+                                            .setKeepInProgressAtFront(true) // TODO: to expose with preference
+                                            );
 
                     for (int i = 0; i < itemIds.length; i++) {
                         if (!itemListContains(queue, itemIds[i])) {
@@ -398,6 +400,7 @@ public class DBWriter {
 
         public static class Options {
             private boolean enqueueAtFront = false;
+            private boolean keepInProgressAtFront = false;
 
             public boolean isEnqueueAtFront() {
                 return enqueueAtFront;
@@ -405,6 +408,15 @@ public class DBWriter {
 
             public Options setEnqueueAtFront(boolean enqueueAtFront) {
                 this.enqueueAtFront = enqueueAtFront;
+                return this;
+            }
+
+            public boolean isKeepInProgressAtFront() {
+                return keepInProgressAtFront;
+            }
+
+            public Options setKeepInProgressAtFront(boolean keepInProgressAtFront) {
+                this.keepInProgressAtFront = keepInProgressAtFront;
                 return this;
             }
         }
@@ -428,9 +440,16 @@ public class DBWriter {
          */
         public int calcPosition(int positionAmongToAdd, FeedItem item, List<FeedItem> curQueue) {
             if (options.isEnqueueAtFront()) {
-                // NOT 0, so that when a list of items are inserted, the items inserted
-                // keep the same order. Returning 0 will reverse the order
-                return positionAmongToAdd;
+                if (options.isKeepInProgressAtFront() &&
+                        curQueue.size() > 0 &&
+                        curQueue.get(0).getMedia() != null &&
+                        curQueue.get(0).getMedia().isInProgress()) {
+                    return positionAmongToAdd + 1; // leave the front in progress item at the front
+                } else { // typical case
+                    // return NOT 0, so that when a list of items are inserted, the items inserted
+                    // keep the same order. Returning 0 will reverse the order
+                    return positionAmongToAdd;
+                }
             } else {
                 return curQueue.size();
             }
