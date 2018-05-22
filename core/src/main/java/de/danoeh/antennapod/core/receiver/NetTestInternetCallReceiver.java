@@ -21,7 +21,7 @@ public class NetTestInternetCallReceiver extends NetTestAbstractReceiver {
         new Handler().postDelayed(() -> logNetworkAvailable(context, "Delay 06s"), 6000);
     }
 
-    private class HasActiveInternetConnectionTask extends AsyncTask<Void,Void,Void> {
+    protected class HasActiveInternetConnectionTask extends AsyncTask<Void,Void,Void> {
         private Context context;
 
         public HasActiveInternetConnectionTask(Context context) {
@@ -40,7 +40,7 @@ public class NetTestInternetCallReceiver extends NetTestAbstractReceiver {
 
     }
 
-    private static boolean hasActiveInternetConnection(Context context) {
+    protected boolean hasActiveInternetConnection(Context context) {
         try {
             HttpURLConnection urlc = (HttpURLConnection) (new URL("http://www.google.com/").openConnection());
             urlc.setRequestProperty("User-Agent", "Test");
