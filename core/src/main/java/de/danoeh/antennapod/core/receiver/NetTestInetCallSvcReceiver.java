@@ -11,12 +11,6 @@ public class NetTestInetCallSvcReceiver extends NetTestAbstractReceiver {
     private static final String TAG = "NetTestInetCallSvcRcvr";
 
     @Override
-    public void onReceive(Context context, Intent intent) {
-        LogToFile.d(context, TAG, "Test check internet from a service");
-        doCaseNetworkUnavailable(context);
-    }
-
-    @Override
     protected void doCaseNetworkUnavailable(Context context) {
         LogToFile.d(context, TAG, "  About to start service which calls hasActiveInternetConnection()...");
         Intent intent = new Intent(context.getApplicationContext(), NetTestInternetCallService.class);
