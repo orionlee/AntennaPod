@@ -19,7 +19,7 @@ public class NetTestInternetCallReceiver extends NetTestAbstractReceiver {
         LogToFile.d(context, TAG, "  About to call hasActiveInternetConnection()...");
         new HasActiveInternetConnectionTask(context).execute();
         logNetworkAvailable(context, "After hasActiveInternetConnection");
-        new Handler().postDelayed(() -> logNetworkAvailable(context, "Delay 02s"), 2000);
+        new Handler().postDelayed(() -> logNetworkAvailable(context, "Delay 06s"), 6000);
     }
 
     private class HasActiveInternetConnectionTask extends AsyncTask<Void,Void,Void> {
@@ -46,7 +46,7 @@ public class NetTestInternetCallReceiver extends NetTestAbstractReceiver {
             HttpURLConnection urlc = (HttpURLConnection) (new URL("http://www.google.com/").openConnection());
             urlc.setRequestProperty("User-Agent", "Test");
             urlc.setRequestProperty("Connection", "close");
-            urlc.setConnectTimeout(1500);
+            urlc.setConnectTimeout(4000);
             urlc.connect();
             return true;
         } catch (IOException ioe) {
