@@ -1,6 +1,7 @@
 package de.danoeh.antennapod.core.receiver;
 
 import android.content.Context;
+import android.os.AsyncTask;
 import android.os.Handler;
 
 import java.io.IOException;
@@ -15,13 +16,29 @@ public class NetTestInternetCallReceiver extends NetTestAbstractReceiver {
 
     @Override
     protected void doCaseNetworkUnavailable(Context context) {
-        if (hasActiveInternetConnection(context)) {
-            LogToFile.d(context, TAG, "  device is connected to internet");
-        } else {
-            LogToFile.d(context, TAG, "  device is not connected to internet");
-        }
+        LogToFile.d(context, TAG, "  About to call hasActiveInternetConnection()...");
+        new HasActiveInternetConnectionTask(context).execute();
         logNetworkAvailable(context, "After hasActiveInternetConnection");
         new Handler().postDelayed(() -> logNetworkAvailable(context, "Delay 02s"), 2000);
+    }
+
+    private class HasActiveInternetConnectionTask extends AsyncTask<Void,Void,Void> {
+        private Context context;
+
+        public HasActiveInternetConnectionTask(Context context) {
+            this.context = context;
+        }
+
+        protected Void doInBackground(Void... params) {
+            if (hasActiveInternetConnection(context)) {
+                LogToFile.d(context, TAG, "  device is connected to internet");
+            } else {
+                LogToFile.d(context, TAG, "  device is not connected to internet");
+            }
+            logNetworkAvailable(context, "After hasActiveInternetConnection");
+            return null;
+        }
+
     }
 
     private static boolean hasActiveInternetConnection(Context context) {
