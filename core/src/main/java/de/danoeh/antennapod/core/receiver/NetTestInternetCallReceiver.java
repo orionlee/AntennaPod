@@ -17,7 +17,7 @@ public class NetTestInternetCallReceiver extends NetTestAbstractReceiver {
     @Override
     protected void doCaseNetworkUnavailable(Context context) {
         LogToFile.d(context, TAG, "  About to call hasActiveInternetConnection()...");
-        new HasActiveInternetConnectionTask(context).execute();
+        new Handler().postDelayed(() -> new HasActiveInternetConnectionTask(context).execute(), 1000);
         new Handler().postDelayed(() -> logNetworkAvailable(context, "Delay 06s"), 6000);
     }
 
