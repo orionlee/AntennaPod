@@ -20,6 +20,7 @@ abstract class NetTestAbstractReceiver extends BroadcastReceiver {
         } else {
             LogToFile.d(context, tag(), "Case NetworkUtils.networkAvailable() == false - Retrying.");
             logNetworkDetails(context);
+            doCaseNetworkUnavailable(context);
         }
     }
 
