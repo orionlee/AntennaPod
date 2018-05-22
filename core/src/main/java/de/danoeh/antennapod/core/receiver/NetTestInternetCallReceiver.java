@@ -47,6 +47,7 @@ public class NetTestInternetCallReceiver extends NetTestAbstractReceiver {
             urlc.setRequestProperty("Connection", "close");
             urlc.setConnectTimeout(4000);
             urlc.connect();
+            urlc.disconnect();
             return true;
         } catch (IOException ioe) {
             LogToFile.d(context, TAG, "hasActiveInternetConnection() fails: " + ioe.getMessage());
