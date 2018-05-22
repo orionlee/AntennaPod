@@ -25,7 +25,11 @@ abstract class NetTestAbstractReceiver extends BroadcastReceiver {
     }
 
     protected void logNetworkAvailable(Context context, String msgPrefix) {
-        LogToFile.d(context, tag(),
+        logNetworkAvailable(context, tag(), msgPrefix);
+    }
+
+    static void logNetworkAvailable(Context context, String tag, String msgPrefix) {
+        LogToFile.d(context, tag,
                 String.format("  [%s]NetworkUtils.networkAvailable(): %s",
                         msgPrefix, NetworkUtils.networkAvailable()));
     }

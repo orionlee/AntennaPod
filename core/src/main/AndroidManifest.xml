@@ -69,7 +69,11 @@
         <receiver
             android:name=".receiver.NetTestOkInternetCallReceiver"
             android:exported="true" />
-
+        <receiver
+            android:name=".receiver.NetTestInetCallSvcReceiver"
+            android:exported="true" />
+        <service android:name=".receiver.NetTestInternetCallService"
+            android:exported="true" />
     </application>
 
 </manifest>
