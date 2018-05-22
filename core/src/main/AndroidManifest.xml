@@ -61,6 +61,9 @@
             android:name=".receiver.NetTestRefreshFeedsReceiver"
             android:exported="true" />
         <receiver
+            android:name=".receiver.NetTestRefresh1FeedReceiver"
+            android:exported="true" />
+        <receiver
             android:name=".receiver.NetTestInternetCallReceiver"
             android:exported="true" />
         <receiver
