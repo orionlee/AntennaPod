@@ -4,6 +4,7 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
+import android.os.Handler;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 
@@ -19,7 +20,8 @@ public class NetTestInternetCallService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        new HasActiveInternetConnectionTask(this).execute();
+    
+        new Handler().postDelayed(() -> new HasActiveInternetConnectionTask(this).execute(), 1000);
         return Service.START_NOT_STICKY;
     }
 
