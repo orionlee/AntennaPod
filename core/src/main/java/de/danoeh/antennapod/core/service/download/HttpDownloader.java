@@ -24,6 +24,7 @@ import de.danoeh.antennapod.core.feed.FeedImage;
 import de.danoeh.antennapod.core.feed.FeedMedia;
 import de.danoeh.antennapod.core.util.DateUtils;
 import de.danoeh.antennapod.core.util.DownloadError;
+import de.danoeh.antennapod.core.util.LogToFile;
 import de.danoeh.antennapod.core.util.StorageUtils;
 import de.danoeh.antennapod.core.util.URIUtil;
 import okhttp3.Interceptor;
@@ -121,6 +122,8 @@ public class HttpDownloader extends Downloader {
             if (!TextUtils.isEmpty(contentEncodingHeader)) {
                 isGzip = TextUtils.equals(contentEncodingHeader.toLowerCase(), "gzip");
             }
+            LogToFile.d(ClientConfig.applicationCallbacks.getApplicationInstance().getApplicationContext(),
+                    TAG, "  Downloading: <" + uri + ">");
 
             Log.d(TAG, "Response code is " + response.code());
 
