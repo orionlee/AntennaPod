@@ -69,7 +69,7 @@ public class SubscriptionFragment extends Fragment {
         subscriptionLayout = root.findViewById(R.id.subscriptions_view);
         RecyclerView.LayoutManager layoutManager = new GridLayoutManager(getActivity(), 3);
         subscriptionLayout.setLayoutManager(layoutManager);
-        registerForContextMenu(subscriptionLayout); // TODO LATER: not needed when context menu handling is moved to ViewHolder
+        registerForContextMenu(subscriptionLayout);
         return root;
     }
 
@@ -107,6 +107,32 @@ public class SubscriptionFragment extends Fragment {
                     subscriptionAdapter.notifyDataSetChanged();
                 }, error -> Log.e(TAG, Log.getStackTraceString(error)));
     }
+
+    // Listeners for item views backed by subscriptionAdapter
+    //
+    // Design Note: onClick() is done within SubscriptionAdapter.ViewHolder.
+    // Android's API makes it hard / awkward to centralize all listeners in one place.
+    //
+    // If we want to centralize all in SubscriptionAdapter.ViewHolder, (arguably the logical place),
+    // specifically on the item view itself.
+    // - onclick handling is straightforward: the ViewHolder naturally has the data needed
+    // - context menu handling is 50-50:
+    //   - onCreateContextMenu() can be done easily
+    //   - onContextItemSelected(): there is no such hook at item view level.
+    //
+    // If we want to centralize all in SubscriptionFragment
+    // - context menu handling is somewhat straightforward by overriding
+    //   onCreateContextMenu() and onContextItemSelected().
+    //   - they, however, require additional logic in SubscriptionAdapter.getSelectedItem()
+    //     to know the item being selected.
+    // - onclick handling is a bit awkward: even though it can be done similarly, it does require
+    //   additional (and similar) logic from SubscriptionAdapter to keep track of the item being clicked.
+    //   Keeping track of the item being clicked, however, cannot be done with
+    //   itemView.setOnClickListener(), because OnClickListener cannot indicate that the click is not consumed.
+    //   It is possible to do the tracking via the lower-level OnTouchListener. However, it requires the
+    //   the implementation to deal with low-level logic in identifying whether the touch is a click
+    //   (as opposed to swipe, drag, etc).
+    //
 
     @Override
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {

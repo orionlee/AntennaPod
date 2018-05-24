@@ -9,7 +9,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 
@@ -48,7 +47,6 @@ public class SubscriptionsAdapter extends RecyclerView.Adapter<SubscriptionsAdap
         private final ImageView imgvCover;
         private final TriangleLabelView triangleCountView;
 
-        // TODO LATER: consider to use a generic Object item
         private Feed feed; // the underlying data backing this ViewHolder
 
         public ViewHolder(View itemView) {
@@ -161,7 +159,7 @@ public class SubscriptionsAdapter extends RecyclerView.Adapter<SubscriptionsAdap
     public void onBindViewHolder(ViewHolder holder, int position) {
         if (position == getAddTilePosition()) {
             holder.bindAddFeed();
-            holder.itemView.setOnLongClickListener(v -> { // TODO LATER: not needed when context menu handling moved to ViewHolder
+            holder.itemView.setOnLongClickListener(v -> {
                 selectedItem = ADD_ITEM_OBJ;
                 return false;
             });
@@ -181,18 +179,9 @@ public class SubscriptionsAdapter extends RecyclerView.Adapter<SubscriptionsAdap
      * Typically a {@link Feed} object, but it can also be {@link #ADD_ITEM_OBJ} to indicate
      * the item is the UI control to launch {@link AddFeedFragment}
      */
-    // TODO LATER: not needed if context menu handling is moved to ViewHolder
     @Nullable
     public Object getSelectedItem() {
         return selectedItem;
-    }
-
-    // TODO LATER: remove it once done
-    private void dbgMessage(String message) {
-        Toast.makeText(mainActivityRef.get().getApplicationContext(),
-                message,
-                Toast.LENGTH_SHORT)
-                .show();
     }
 
 }
