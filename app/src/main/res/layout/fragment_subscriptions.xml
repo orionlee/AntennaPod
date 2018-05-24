@@ -5,12 +5,15 @@
     android:layout_height="match_parent">
 
     <android.support.v7.widget.RecyclerView
+        xmlns:app="http://schemas.android.com/apk/res-auto"
         android:id="@+id/subscriptions_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:horizontalSpacing="2dp"
         android:verticalSpacing="2dp"
         android:layout_gravity="center_horizontal"
+        app:spanCount="3"
+        app:layoutManager="android.support.v7.widget.GridLayoutManager"
         android:scrollbars="vertical"/>
 
 </LinearLayout>
