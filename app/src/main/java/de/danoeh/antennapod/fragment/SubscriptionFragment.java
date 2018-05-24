@@ -4,6 +4,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.support.v7.widget.GridLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.LayoutInflater;
@@ -11,8 +13,6 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.GridView;
 
 import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.activity.MainActivity;
@@ -42,11 +42,9 @@ public class SubscriptionFragment extends Fragment {
     private static final int EVENTS = EventDistributor.FEED_LIST_UPDATE
             | EventDistributor.UNREAD_ITEMS_UPDATE;
 
-    private GridView subscriptionGridLayout;
+    private RecyclerView subscriptionLayout;
     private DBReader.NavDrawerData navDrawerData;
     private SubscriptionsAdapter subscriptionAdapter;
-
-    private int mPosition = -1;
 
     private Subscription subscription;
 
@@ -68,25 +66,23 @@ public class SubscriptionFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.fragment_subscriptions, container, false);
-        subscriptionGridLayout = (GridView) root.findViewById(R.id.subscriptions_grid);
-        registerForContextMenu(subscriptionGridLayout);
+        subscriptionLayout = root.findViewById(R.id.subscriptions_view);
+        RecyclerView.LayoutManager layoutManager = new GridLayoutManager(getActivity(), 3);
+        subscriptionLayout.setLayoutManager(layoutManager);
+        registerForContextMenu(subscriptionLayout); // TODO LATER: not needed when context menu handling is moved to ViewHolder
         return root;
     }
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        subscriptionAdapter = new SubscriptionsAdapter((MainActivity)getActivity(), itemAccess);
+        subscriptionAdapter = new SubscriptionsAdapter(getMainActivity(), itemAccess);
 
-        subscriptionGridLayout.setAdapter(subscriptionAdapter);
+        subscriptionLayout.setAdapter(subscriptionAdapter);
 
         loadSubscriptions();
 
-        subscriptionGridLayout.setOnItemClickListener(subscriptionAdapter);
-
-        if (getActivity() instanceof MainActivity) {
-            ((MainActivity) getActivity()).getSupportActionBar().setTitle(R.string.subscriptions_label);
-        }
+        getMainActivity().getSupportActionBar().setTitle(R.string.subscriptions_label);
 
         EventDistributor.getInstance().register(contentUpdate);
     }
@@ -115,12 +111,13 @@ public class SubscriptionFragment extends Fragment {
     @Override
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
         super.onCreateContextMenu(menu, v, menuInfo);
-        AdapterView.AdapterContextMenuInfo adapterInfo = (AdapterView.AdapterContextMenuInfo) menuInfo;
-        int position = adapterInfo.position;
 
-        Object selectedObject = subscriptionAdapter.getItem(position);
+        Object selectedObject = subscriptionAdapter.getSelectedItem();
+        if (selectedObject == null) {
+            Log.w(TAG, "onCreateContextMenu(): selected item is unexpectedly null");
+        }
+
         if (selectedObject.equals(SubscriptionsAdapter.ADD_ITEM_OBJ)) {
-            mPosition = position;
             return;
         }
 
@@ -130,20 +127,16 @@ public class SubscriptionFragment extends Fragment {
         inflater.inflate(R.menu.nav_feed_context, menu);
 
         menu.setHeaderTitle(feed.getTitle());
-
-        mPosition = position;
     }
 
     @Override
     public boolean onContextItemSelected(MenuItem item) {
 
-        final int position = mPosition;
-        mPosition = -1; // reset
-        if(position < 0) {
-            return false;
+        Object selectedObject = subscriptionAdapter.getSelectedItem();
+        if (selectedObject == null) {
+            Log.w(TAG, "onContextItemSelected(): selected item is unexpectedly null");
         }
 
-        Object selectedObject = subscriptionAdapter.getItem(position);
         if (selectedObject.equals(SubscriptionsAdapter.ADD_ITEM_OBJ)) {
             // this is the add object, do nothing
             return false;
@@ -229,6 +222,10 @@ public class SubscriptionFragment extends Fragment {
     public void onResume() {
         super.onResume();
         loadSubscriptions();
+    }
+
+    private MainActivity getMainActivity() {
+        return (MainActivity)getActivity();
     }
 
     private final EventDistributor.EventListener contentUpdate = new EventDistributor.EventListener() {
