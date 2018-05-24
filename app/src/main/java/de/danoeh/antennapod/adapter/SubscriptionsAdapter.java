@@ -41,7 +41,7 @@ public class SubscriptionsAdapter extends RecyclerView.Adapter<SubscriptionsAdap
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder
-            implements View.OnClickListener {
+            implements View.OnClickListener, View.OnLongClickListener {
 
         private final TextView txtvTitle;
         private final ImageView imgvCover;
@@ -55,6 +55,7 @@ public class SubscriptionsAdapter extends RecyclerView.Adapter<SubscriptionsAdap
             imgvCover = itemView.findViewById(R.id.imgvCover);
             triangleCountView = itemView.findViewById(R.id.triangleCountView);
             itemView.setOnClickListener(this);
+            itemView.setOnLongClickListener(this);
         }
 
         void bind(Feed feed) {
@@ -82,6 +83,7 @@ public class SubscriptionsAdapter extends RecyclerView.Adapter<SubscriptionsAdap
                     .fitCenter()
                     .dontAnimate()
                     .into(new CoverTarget(null, txtvTitle, imgvCover, mainActivityRef.get()));
+
         }
 
         void bindAddFeed() {
@@ -112,6 +114,13 @@ public class SubscriptionsAdapter extends RecyclerView.Adapter<SubscriptionsAdap
             }
         }
 
+        // Track the item being long-clicked so that the context menu handling logic
+        // in parent SubscriptionFragment can have access to the backing feed object.
+        @Override
+        public boolean onLongClick(View v) {
+            SubscriptionsAdapter.this.selectedItem = isItemAddFeed() ? ADD_ITEM_OBJ : feed;
+            return false;
+        }
     }
 
     private final WeakReference<MainActivity> mainActivityRef;
@@ -159,17 +168,9 @@ public class SubscriptionsAdapter extends RecyclerView.Adapter<SubscriptionsAdap
     public void onBindViewHolder(ViewHolder holder, int position) {
         if (position == getAddTilePosition()) {
             holder.bindAddFeed();
-            holder.itemView.setOnLongClickListener(v -> {
-                selectedItem = ADD_ITEM_OBJ;
-                return false;
-            });
         } else {
             Feed feed = itemAccess.getItem(position);
             holder.bind(feed);
-            holder.itemView.setOnLongClickListener(v -> {
-                selectedItem = feed;
-                return false;
-            });
         }
     }
 
