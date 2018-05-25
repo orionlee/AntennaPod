@@ -1,17 +1,21 @@
 <?xml version='1.0' encoding='utf-8'?>
 <FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:clickable="true"
     android:foreground="?attr/selectableItemBackground">
+
     <TextView
         android:id="@+id/txtvGroupTitle"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:gravity="start"
+        android:paddingLeft="8dp"
         android:paddingStart="8dp"
         android:paddingTop="16dp"
-        android:textSize="24dp"
-        android:gravity="start"/>
+        android:textAppearance="@style/TextAppearance.AppCompat.Headline"
+        tools:text="group title" />
 </FrameLayout>
 

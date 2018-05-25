@@ -45,6 +45,7 @@ android {
         testApplicationId "de.test.antennapod"
         testInstrumentationRunner "de.test.antennapod.AntennaPodTestRunner"
         generatedDensities = []
+        vectorDrawables.useSupportLibrary = true
     }
 
     signingConfigs {

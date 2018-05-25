@@ -1,5 +1,7 @@
 package de.danoeh.antennapod.adapter;
 
+import android.os.Build;
+import android.support.annotation.DrawableRes;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.RecyclerView.AdapterDataObserver;
@@ -48,10 +50,19 @@ public class SubscriptionsByGroupAdapter extends
             txtvGroupTitle = itemView.findViewById(R.id.txtvGroupTitle);
         }
 
+
         public void bind(Group group) {
-            // TODO LATER: nicer expand / collapse indicator
-            String expandCollapseIndicator = group.isExpanded() ? "V" : ">";
-            txtvGroupTitle.setText(String.format("%s  %s (%d)", expandCollapseIndicator, group.getTitle(), group.size()));
+            @DrawableRes int expandIndicator =
+                    group.isExpanded() ? R.drawable.ic_expand_less_gray_24dp :
+                            R.drawable.ic_expand_more_gray_24dp;
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                txtvGroupTitle.setCompoundDrawablesRelativeWithIntrinsicBounds(expandIndicator, 0 , 0, 0);
+            } else {
+                txtvGroupTitle.setCompoundDrawablesWithIntrinsicBounds(expandIndicator, 0, 0, 0);
+            }
+
+            txtvGroupTitle.setText(String.format("%s (%d)", group.getTitle(), group.size()));
         }
     }
 
@@ -418,5 +429,6 @@ public class SubscriptionsByGroupAdapter extends
     }
 
     // TODO LATER: support add podcast (maybe through an option menu on the parent fragment instead)
+
 
 }
