@@ -338,6 +338,5 @@ public class SubscriptionFragment extends Fragment {
             return navDrawerData != null ? navDrawerData.feedCounters.get(feedId) : 0;
         }
     };
-
-
+    
 }

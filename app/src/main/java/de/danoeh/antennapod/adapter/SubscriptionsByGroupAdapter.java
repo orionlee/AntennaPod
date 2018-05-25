@@ -196,7 +196,6 @@ public class SubscriptionsByGroupAdapter extends
          *
          * @return the group object for the named position, null otherwise
          */
-        // TODO: interpret the position correctly when some groups are collapsed
         public Group getGroupByVisibleFlattenedPosition(int pos) {
             Object item = getItemByFlattenedPosition(pos);
 
@@ -220,9 +219,13 @@ public class SubscriptionsByGroupAdapter extends
             flattenedItemList.clear();
             for (Group group : groups) {
                 flattenedItemList.add(group);
-                for (Feed feed : group.feeds) {
-                    flattenedItemList.add(feed);
+                if (group.isExpanded()) {
+                    for (Feed feed : group.feeds) {
+                        flattenedItemList.add(feed);
+                    }
                 }
+                // else the feeds are note visible,
+                // not counted in the flatten list as seen by the underlying RecyclerView
             }
         }
 
@@ -410,7 +413,10 @@ public class SubscriptionsByGroupAdapter extends
     private void notifyGroupChanged(@NonNull Group group) {
         int flattenedPosition = groups.flattenedItemList.indexOf(group); // TODO LATER: better abstraction
         notifyItemChanged(flattenedPosition);
+        // once expand/collapse done, update the flattened item list as seen by RecyclerView
+        groups.updateFlattenedItemList();
     }
 
     // TODO LATER: support add podcast (maybe through an option menu on the parent fragment instead)
+
 }
