@@ -152,7 +152,6 @@ public class SubscriptionFragment extends Fragment {
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(result -> {
                     navDrawerData = result;
-                    subscriptionAdapter.refresh(); // TODO LATER: adapter itself should refresh upon data set changed.
                     subscriptionAdapter.notifyDataSetChanged();
                 }, error -> Log.e(TAG, Log.getStackTraceString(error)));
     }
@@ -339,5 +338,6 @@ public class SubscriptionFragment extends Fragment {
             return navDrawerData != null ? navDrawerData.feedCounters.get(feedId) : 0;
         }
     };
+
 
 }

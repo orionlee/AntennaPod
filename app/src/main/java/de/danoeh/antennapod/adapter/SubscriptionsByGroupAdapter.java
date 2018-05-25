@@ -2,6 +2,7 @@ package de.danoeh.antennapod.adapter;
 
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
+import android.support.v7.widget.RecyclerView.AdapterDataObserver;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -238,6 +239,16 @@ public class SubscriptionsByGroupAdapter extends
     // UI states
     private Feed selectedItem; // for the use with binding item context menu
 
+    // Update the backend when underlying data (represented by ItemAccess) is changed.
+    // It does not cover pure UI changes, e.g., expand/collapse
+    private AdapterDataObserver itemsChangedObserver = new AdapterDataObserver() {
+        @Override
+        public void onChanged() {
+            super.onChanged();
+            refresh();
+        }
+    };
+
     public SubscriptionsByGroupAdapter(MainActivity mainActivity, SubscriptionFragment.ItemAccess itemAccess) {
         super();
         setHasStableIds(true); // this is required for expandable feature.
@@ -247,6 +258,7 @@ public class SubscriptionsByGroupAdapter extends
         this.groups = createInitialGroups();
 
         refresh();
+        registerAdapterDataObserver(itemsChangedObserver);
     }
 
     // BEGIN Priority-specific
@@ -268,7 +280,7 @@ public class SubscriptionsByGroupAdapter extends
     /**
      * Reflect any changes of the underlying data in {@link #itemAccess}
      */
-    public void refresh() {
+    private void refresh() {
         groups.clearFeeds();
 
         Log.v(TAG, "refresh() - #items: " + itemAccess.getCount());
