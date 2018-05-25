@@ -37,12 +37,12 @@ subprojects {
 }
 
 project.ext {
-    compileSdkVersion = 26
+    compileSdkVersion = 27
     buildToolsVersion = "27.0.3"
     minSdkVersion = 14
-    targetSdkVersion = 26
+    targetSdkVersion = 27
 
-    supportVersion = "26.1.0"
+    supportVersion = "27.0.0"
     commonsioVersion = "2.5"
     commonslangVersion = "3.6"
     commonstextVersion = "1.3"

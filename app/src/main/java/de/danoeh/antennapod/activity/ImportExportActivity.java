@@ -125,7 +125,7 @@ public class ImportExportActivity extends AppCompatActivity {
         d.setPositiveButton(android.R.string.ok, (dialogInterface, i) -> {
             Intent intent = new Intent(getApplicationContext(), SplashActivity.class);
             ComponentName cn = intent.getComponent();
-            Intent mainIntent = IntentCompat.makeRestartActivityTask(cn);
+            Intent mainIntent = Intent.makeRestartActivityTask(cn);
             startActivity(mainIntent);
         });
         d.show();

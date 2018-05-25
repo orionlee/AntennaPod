@@ -177,6 +177,10 @@ dependencies {
 
     implementation "com.github.shts:TriangleLabelView:$triangleLabelViewVersion"
 
+    implementation ('com.h6ah4i.android.widget.advrecyclerview:advrecyclerview:0.11.0@aar'){
+        transitive=true
+    }
+
     implementation "com.github.AntennaPod:AntennaPod-AudioPlayer:$audioPlayerVersion"
 
     implementation 'com.github.mfietz:fyydlin:v0.3'
