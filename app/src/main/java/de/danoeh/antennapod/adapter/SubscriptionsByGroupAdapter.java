@@ -52,8 +52,8 @@ public class SubscriptionsByGroupAdapter extends
 
         public void bind(Group group) {
             @DrawableRes int expandIndicator =
-                    group.isExpanded() ? R.drawable.ic_expand_less_gray_24dp :
-                            R.drawable.ic_expand_more_gray_24dp;
+                    group.isExpanded() ? R.drawable.ic_expand_less_gray_36dp :
+                            R.drawable.ic_expand_more_gray_36dp;
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
                 txtvGroupTitle.setCompoundDrawablesRelativeWithIntrinsicBounds(expandIndicator, 0 , 0, 0);
