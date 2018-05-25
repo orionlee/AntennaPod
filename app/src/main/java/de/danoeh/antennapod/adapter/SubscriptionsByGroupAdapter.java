@@ -326,7 +326,6 @@ public class SubscriptionsByGroupAdapter extends
 
     @Override
     public long getChildId(int groupPosition, int childPosition) {
-        Log.v(TAG, String.format("getChildId(%d, %d)...", groupPosition, childPosition));
         // TODO LATER: deal with id range restriction imposed by advanced-recyclerview
         return getFeedByPos(groupPosition, childPosition).getId();
     }
