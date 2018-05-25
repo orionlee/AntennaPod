@@ -57,7 +57,7 @@ public class SubscriptionsByGroupAdapter extends
     // TODO LATER: factor out common codes with SubscriptionAdapter
     // (Or make the fragment use this adapter for both by group or flat list case)
     public class FeedViewHolder extends AbstractExpandableItemViewHolder
-            implements View.OnClickListener {
+            implements View.OnClickListener, View.OnLongClickListener {
 
         private final TextView txtvTitle;
         private final ImageView imgvCover;
@@ -71,6 +71,7 @@ public class SubscriptionsByGroupAdapter extends
             imgvCover = itemView.findViewById(R.id.imgvCover);
             triangleCountView = itemView.findViewById(R.id.triangleCountView);
             itemView.setOnClickListener(this);
+            itemView.setOnLongClickListener(this);
         }
 
         public void bind(Feed feed) {
@@ -102,6 +103,14 @@ public class SubscriptionsByGroupAdapter extends
                 Fragment fragment = ItemlistFragment.newInstance(feed.getId());
                 mainActivityRef.get().loadChildFragment(fragment);
             }
+        }
+
+        // Track the item being long-clicked so that the context menu handling logic
+        // in parent SubscriptionFragment can have access to the backing feed object.
+        @Override
+        public boolean onLongClick(View v) {
+            SubscriptionsByGroupAdapter.this.selectedItem = feed;
+            return false;
         }
 
     }
@@ -226,6 +235,9 @@ public class SubscriptionsByGroupAdapter extends
 
     private final Groups groups;
 
+    // UI states
+    private Feed selectedItem; // for the use with binding item context menu
+
     public SubscriptionsByGroupAdapter(MainActivity mainActivity, SubscriptionFragment.ItemAccess itemAccess) {
         super();
         setHasStableIds(true); // this is required for expandable feature.
@@ -281,8 +293,8 @@ public class SubscriptionsByGroupAdapter extends
     //
     // END Priority-specific
 
-    public Object getSelectedItem() {
-        return null; // TODO: to be implemented;
+    public Feed getSelectedItem() {
+        return selectedItem;
     }
 
     public Group getGroupByFlattenedPosition(int pos) {
