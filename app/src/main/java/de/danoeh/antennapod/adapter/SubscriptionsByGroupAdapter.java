@@ -46,8 +46,10 @@ public class SubscriptionsByGroupAdapter extends
         }
 
         public void bind(Group group) {
-            // TODO: include expand / collapse indicator
-            txtvGroupTitle.setText(String.format("%s (%d)", group.getTitle(), group.size()));
+            // TODO LATER: nicer expand / collapse indicator
+            String expandCollapseIndicator = group.isExpanded() ? "V" : ">";
+            txtvGroupTitle.setText(String.format("%s  %s (%d)", expandCollapseIndicator, group.getTitle(), group.size()));
+            group.setViewHolder(this);
         }
     }
 
@@ -93,6 +95,9 @@ public class SubscriptionsByGroupAdapter extends
         private final String title;
         private final List<Feed> feeds;
 
+        // UI states
+        private boolean expanded = true;
+
         public Group(long id, String title) {
             this.id = id;
             this.title = title;
@@ -113,6 +118,14 @@ public class SubscriptionsByGroupAdapter extends
 
         public boolean add(Feed feed) {
             return feeds.add(feed);
+        }
+
+        public boolean isExpanded() {
+            return expanded;
+        }
+
+        public void setExpanded(boolean expanded) {
+            this.expanded = expanded;
         }
 
     }
@@ -335,5 +348,29 @@ public class SubscriptionsByGroupAdapter extends
         return true;
     }
 
+    @Override
+    public boolean onHookGroupExpand(int groupPosition, boolean fromUser) {
+        Group group = getGroupByPos(groupPosition);
+        if (group != null) {
+            group.setExpanded(true);
+            notifyGroupChanged(group);
+        }
+        return true;
+    }
+
+    @Override
+    public boolean onHookGroupCollapse(int groupPosition, boolean fromUser) {
+        Group group = getGroupByPos(groupPosition);
+        if (group != null) {
+            group.setExpanded(false);
+            notifyGroupChanged(group);
+        }
+        return true;
+    }
+
+    private void notifyGroupChanged(@NonNull Group group) {
+        int flattenedPosition = groups.flattenedItemList.indexOf(group); // TODO LATER: better abstraction
+        notifyItemChanged(flattenedPosition);
+    }
 
 }
