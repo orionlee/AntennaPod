@@ -4,7 +4,6 @@ import android.os.Build;
 import android.support.annotation.DrawableRes;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
-import android.support.v7.widget.RecyclerView.AdapterDataObserver;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -253,16 +252,6 @@ public class SubscriptionsByGroupAdapter extends
     // UI states
     private Feed selectedItem; // for the use with binding item context menu
 
-    // Update the backend when underlying data (represented by ItemAccess) is changed.
-    // It does not cover pure UI changes, e.g., expand/collapse
-    private AdapterDataObserver itemsChangedObserver = new AdapterDataObserver() {
-        @Override
-        public void onChanged() {
-            super.onChanged();
-            refresh();
-        }
-    };
-
     public SubscriptionsByGroupAdapter(MainActivity mainActivity, SubscriptionFragment.ItemAccess itemAccess) {
         super();
         setHasStableIds(true); // this is required for expandable feature.
@@ -270,9 +259,6 @@ public class SubscriptionsByGroupAdapter extends
         this.mainActivityRef = new WeakReference<>(mainActivity);
         this.itemAccess = itemAccess;
         this.groups = createInitialGroups();
-
-        refresh();
-        registerAdapterDataObserver(itemsChangedObserver);
     }
 
     // BEGIN Priority-specific
@@ -292,9 +278,17 @@ public class SubscriptionsByGroupAdapter extends
 
     // TODO LATER: for now hardcoded for experiment.
     /**
-     * Reflect any changes of the underlying data in {@link #itemAccess}
+     * Update internal data structures for UI based of the underlying data in {@link #itemAccess}
+     *
+     * @see #notifyDataSetChanged() For users of this class, {@link #refresh()} should be called before calling
+     * {@link #notifyDataSetChanged()}, to ensure it operates on the latest data.
      */
-    private void refresh() {
+    public void refresh() {
+        // TODO LATER: requiring callers to explicitly call refresh() is error-prone.
+        //
+        // It can be eliminated if the logic here can construct the equivalent of {@link #groups}
+        // data structure, used by the adapter implementation to supply the data to construct UI,
+        // can be created on demand from {@link #itemAccess}
         groups.clearFeeds();
 
         Log.v(TAG, "refresh() - #items: " + itemAccess.getCount());
