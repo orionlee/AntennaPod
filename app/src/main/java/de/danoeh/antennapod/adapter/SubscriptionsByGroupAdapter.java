@@ -1,6 +1,7 @@
 package de.danoeh.antennapod.adapter;
 
 import android.support.annotation.NonNull;
+import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,6 +21,7 @@ import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.activity.MainActivity;
 import de.danoeh.antennapod.core.feed.Feed;
 import de.danoeh.antennapod.core.glide.ApGlideSettings;
+import de.danoeh.antennapod.fragment.ItemlistFragment;
 import de.danoeh.antennapod.fragment.SubscriptionFragment;
 import jp.shts.android.library.TriangleLabelView;
 
@@ -49,26 +51,31 @@ public class SubscriptionsByGroupAdapter extends
             // TODO LATER: nicer expand / collapse indicator
             String expandCollapseIndicator = group.isExpanded() ? "V" : ">";
             txtvGroupTitle.setText(String.format("%s  %s (%d)", expandCollapseIndicator, group.getTitle(), group.size()));
-            group.setViewHolder(this);
         }
     }
 
     // TODO LATER: factor out common codes with SubscriptionAdapter
     // (Or make the fragment use this adapter for both by group or flat list case)
-    public class FeedViewHolder extends AbstractExpandableItemViewHolder {
+    public class FeedViewHolder extends AbstractExpandableItemViewHolder
+            implements View.OnClickListener {
 
         private final TextView txtvTitle;
         private final ImageView imgvCover;
         private final TriangleLabelView triangleCountView;
+
+        private Feed feed = null;
 
         public FeedViewHolder(View itemView) {
             super(itemView);
             txtvTitle = itemView.findViewById(R.id.txtvTitle);
             imgvCover = itemView.findViewById(R.id.imgvCover);
             triangleCountView = itemView.findViewById(R.id.triangleCountView);
+            itemView.setOnClickListener(this);
         }
 
         public void bind(Feed feed) {
+            this.feed = feed;
+
             txtvTitle.setText(feed.getTitle());
 
             int count = itemAccess.getFeedCounter(feed.getId());
@@ -88,6 +95,15 @@ public class SubscriptionsByGroupAdapter extends
                     .into(new CoverTarget(null, txtvTitle, imgvCover, mainActivityRef.get()));
 
         }
+
+        @Override
+        public void onClick(View v) {
+            if (feed != null) {
+                Fragment fragment = ItemlistFragment.newInstance(feed.getId());
+                mainActivityRef.get().loadChildFragment(fragment);
+            }
+        }
+
     }
 
     private static class Group {
@@ -371,6 +387,8 @@ public class SubscriptionsByGroupAdapter extends
     private void notifyGroupChanged(@NonNull Group group) {
         int flattenedPosition = groups.flattenedItemList.indexOf(group); // TODO LATER: better abstraction
         notifyItemChanged(flattenedPosition);
+        notifyDataSetChanged();
     }
 
+    // TODO LATER: support add podcast (maybe through an option menu on the parent fragment instead)
 }
