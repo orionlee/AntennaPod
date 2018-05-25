@@ -84,6 +84,12 @@ public class SubscriptionFragment extends Fragment {
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
+
+        // TODO: after user traverses to another fragment (of MainActivity) and comes back here
+        // the feeds are not displayed (the header are still rendered correctly). They are
+        // displayed correctly only after MainActivity is recreated, e.g., traverse to Preference
+        // and come back, go to home screen and come back, etc.
+
         // TODO LATER: support by group UI and flattened list UI,
         // either by supporting both SubscriptionAdapter and SubscriptionsByGroupAdapter,
         // or make SubscriptionsByGroupAdapter covers flattened list UI case
@@ -338,5 +344,5 @@ public class SubscriptionFragment extends Fragment {
             return navDrawerData != null ? navDrawerData.feedCounters.get(feedId) : 0;
         }
     };
-    
+
 }
