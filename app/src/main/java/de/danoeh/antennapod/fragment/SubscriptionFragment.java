@@ -4,6 +4,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -17,6 +19,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import com.h6ah4i.android.widget.advrecyclerview.expandable.RecyclerViewExpandableItemManager;
+import com.h6ah4i.android.widget.advrecyclerview.utils.WrapperAdapterUtils;
 
 import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.activity.MainActivity;
@@ -55,9 +58,11 @@ public class SubscriptionFragment extends Fragment {
     }
 
     private RecyclerView subscriptionLayout;
-    private DBReader.NavDrawerData navDrawerData;
     private SubscriptionsByGroupAdapter subscriptionAdapter;
     private RecyclerViewExpandableItemManager expandableItemManager;
+    private RecyclerView.Adapter wrappedSubscriptionAdapter;
+
+    private DBReader.NavDrawerData navDrawerData;
 
     private Subscription subscription;
 
@@ -85,8 +90,8 @@ public class SubscriptionFragment extends Fragment {
     }
 
     @Override
-    public void onActivityCreated(Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
 
         // TODO LATER: support by group UI and flattened list UI,
         // either by supporting both SubscriptionAdapter and SubscriptionsByGroupAdapter,
@@ -94,13 +99,14 @@ public class SubscriptionFragment extends Fragment {
         subscriptionAdapter = new SubscriptionsByGroupAdapter(getMainActivity(), itemAccess);
 
         // Setup expandable feature and RecyclerView. Based on
-        // https://github.com/h6ah4i/android-advancedrecyclerview/blob/0.11.0/example/src/main/java/com/h6ah4i/android/example/advrecyclerview/demo_e_minimal/MinimalExpandableExampleActivity.java
+        // https://github.com/h6ah4i/android-advancedrecyclerview/blob/0.11.0/example/src/main/java/com/h6ah4i/android/example/advrecyclerview/demo_e_basic/ExpandableExampleFragment.java
         {
             // Generic for all ExpandableItem type
             //
             final Parcelable eimSavedState = (savedInstanceState != null) ? savedInstanceState.getParcelable(SAVED_STATE_EXPANDABLE_ITEM_MANAGER) : null;
             expandableItemManager = new RecyclerViewExpandableItemManager(eimSavedState);
-            subscriptionLayout.setAdapter(expandableItemManager.createWrappedAdapter(subscriptionAdapter));
+            wrappedSubscriptionAdapter = expandableItemManager.createWrappedAdapter(subscriptionAdapter);
+            subscriptionLayout.setAdapter(wrappedSubscriptionAdapter);
             expandableItemManager.attachRecyclerView(subscriptionLayout);
 
             // NOTE: need to disable change animations to ripple effect work properly
@@ -122,6 +128,31 @@ public class SubscriptionFragment extends Fragment {
         EventDistributor.getInstance().register(contentUpdate);
     }
 
+    @Override
+    public void onDestroyView() {
+        // release resources associated with the expandable recycler view
+        // based on:
+        // https://github.com/h6ah4i/android-advancedrecyclerview/blob/0.11.0/example/src/main/java/com/h6ah4i/android/example/advrecyclerview/demo_e_basic/ExpandableExampleFragment.java
+
+        if (expandableItemManager != null) {
+            expandableItemManager.release();
+            expandableItemManager = null;
+        }
+
+        if (subscriptionLayout != null) {
+            subscriptionLayout.setAdapter(null);
+            subscriptionLayout = null;
+        }
+
+        if (wrappedSubscriptionAdapter != null) {
+            WrapperAdapterUtils.releaseAll(wrappedSubscriptionAdapter);
+            wrappedSubscriptionAdapter = null;
+        }
+
+        subscriptionAdapter = null;
+
+        super.onDestroyView();
+    }
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
