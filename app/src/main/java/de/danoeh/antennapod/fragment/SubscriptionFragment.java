@@ -3,6 +3,7 @@ package de.danoeh.antennapod.fragment;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -45,6 +46,7 @@ public class SubscriptionFragment extends Fragment {
     private static final int EVENTS = EventDistributor.FEED_LIST_UPDATE
             | EventDistributor.UNREAD_ITEMS_UPDATE;
 
+    private static final String SAVED_STATE_EXPANDABLE_ITEM_MANAGER = "RecyclerViewExpandableItemManager";
 
     public interface ItemAccess {
         int getCount();
@@ -55,6 +57,7 @@ public class SubscriptionFragment extends Fragment {
     private RecyclerView subscriptionLayout;
     private DBReader.NavDrawerData navDrawerData;
     private SubscriptionsByGroupAdapter subscriptionAdapter;
+    private RecyclerViewExpandableItemManager expandableItemManager;
 
     private Subscription subscription;
 
@@ -95,9 +98,10 @@ public class SubscriptionFragment extends Fragment {
         {
             // Generic for all ExpandableItem type
             //
-            RecyclerViewExpandableItemManager expMgr = new RecyclerViewExpandableItemManager(null);
-            subscriptionLayout.setAdapter(expMgr.createWrappedAdapter(subscriptionAdapter));
-            expMgr.attachRecyclerView(subscriptionLayout);
+            final Parcelable eimSavedState = (savedInstanceState != null) ? savedInstanceState.getParcelable(SAVED_STATE_EXPANDABLE_ITEM_MANAGER) : null;
+            expandableItemManager = new RecyclerViewExpandableItemManager(eimSavedState);
+            subscriptionLayout.setAdapter(expandableItemManager.createWrappedAdapter(subscriptionAdapter));
+            expandableItemManager.attachRecyclerView(subscriptionLayout);
 
             // NOTE: need to disable change animations to ripple effect work properly
             ((SimpleItemAnimator) subscriptionLayout.getItemAnimator()).setSupportsChangeAnimations(false);
@@ -118,6 +122,18 @@ public class SubscriptionFragment extends Fragment {
         EventDistributor.getInstance().register(contentUpdate);
     }
 
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        // save current state to support screen rotation, etc...
+        if (expandableItemManager != null) {
+            outState.putParcelable(
+                    SAVED_STATE_EXPANDABLE_ITEM_MANAGER,
+                    expandableItemManager.getSavedState());
+        }
+    }
 
 
     @Override
