@@ -398,7 +398,6 @@ public class SubscriptionsByGroupAdapter extends
     private void notifyGroupChanged(@NonNull Group group) {
         int flattenedPosition = groups.flattenedItemList.indexOf(group); // TODO LATER: better abstraction
         notifyItemChanged(flattenedPosition);
-        notifyDataSetChanged();
     }
 
     // TODO LATER: support add podcast (maybe through an option menu on the parent fragment instead)
