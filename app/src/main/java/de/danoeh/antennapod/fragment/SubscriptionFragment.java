@@ -4,7 +4,9 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.SimpleItemAnimator;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.LayoutInflater;
@@ -13,9 +15,11 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.h6ah4i.android.widget.advrecyclerview.expandable.RecyclerViewExpandableItemManager;
+
 import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.activity.MainActivity;
-import de.danoeh.antennapod.adapter.SubscriptionsAdapter;
+import de.danoeh.antennapod.adapter.SubscriptionsByGroupAdapter;
 import de.danoeh.antennapod.core.asynctask.FeedRemover;
 import de.danoeh.antennapod.core.dialog.ConfirmationDialog;
 import de.danoeh.antennapod.core.feed.EventDistributor;
@@ -41,9 +45,16 @@ public class SubscriptionFragment extends Fragment {
     private static final int EVENTS = EventDistributor.FEED_LIST_UPDATE
             | EventDistributor.UNREAD_ITEMS_UPDATE;
 
+
+    public interface ItemAccess {
+        int getCount();
+        Feed getItem(int position);
+        int getFeedCounter(long feedId);
+    }
+
     private RecyclerView subscriptionLayout;
     private DBReader.NavDrawerData navDrawerData;
-    private SubscriptionsAdapter subscriptionAdapter;
+    private SubscriptionsByGroupAdapter subscriptionAdapter;
 
     private Subscription subscription;
 
@@ -73,9 +84,31 @@ public class SubscriptionFragment extends Fragment {
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        subscriptionAdapter = new SubscriptionsAdapter(getMainActivity(), itemAccess);
+        // TODO LATER: support by group UI and flattened list UI,
+        // either by supporting both SubscriptionAdapter and SubscriptionsByGroupAdapter,
+        // or make SubscriptionsByGroupAdapter covers flattened list UI case
+        subscriptionAdapter = new SubscriptionsByGroupAdapter(getMainActivity(), itemAccess);
 
-        subscriptionLayout.setAdapter(subscriptionAdapter);
+        // Setup expandable feature and RecyclerView. Based on
+        // https://github.com/h6ah4i/android-advancedrecyclerview/blob/0.11.0/example/src/main/java/com/h6ah4i/android/example/advrecyclerview/demo_e_minimal/MinimalExpandableExampleActivity.java
+        {
+            // Generic for all ExpandableItem type
+            //
+            RecyclerViewExpandableItemManager expMgr = new RecyclerViewExpandableItemManager(null);
+            subscriptionLayout.setAdapter(expMgr.createWrappedAdapter(subscriptionAdapter));
+            expMgr.attachRecyclerView(subscriptionLayout);
+
+            // NOTE: need to disable change animations to ripple effect work properly
+            ((SimpleItemAnimator) subscriptionLayout.getItemAnimator()).setSupportsChangeAnimations(false);
+
+            // Specific tweak for SubscriptionsByGroupAdapter, to ensure
+            // group (which acts as a section header) spans entire row
+            RecyclerView.LayoutManager layoutManager =  subscriptionLayout.getLayoutManager();
+            if (layoutManager instanceof GridLayoutManager) {
+                setupGridLayoutManagerForGroups((GridLayoutManager)layoutManager);
+            }
+
+        }
 
         loadSubscriptions();
 
@@ -84,12 +117,30 @@ public class SubscriptionFragment extends Fragment {
         EventDistributor.getInstance().register(contentUpdate);
     }
 
+
+
     @Override
     public void onDestroy() {
         super.onDestroy();
         if(subscription != null) {
             subscription.unsubscribe();
         }
+    }
+
+    // Make group span entire row
+    private void setupGridLayoutManagerForGroups(GridLayoutManager layoutManager) {
+
+        final int spanCount = layoutManager.getSpanCount();
+        layoutManager.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
+            @Override
+            public int getSpanSize(int position) {
+                if (subscriptionAdapter.getGroupByFlattenedPosition(position) != null) {
+                    return spanCount;
+                } else {
+                    return 1;
+                }
+            }
+        });
     }
 
     private void loadSubscriptions() {
@@ -101,6 +152,7 @@ public class SubscriptionFragment extends Fragment {
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(result -> {
                     navDrawerData = result;
+                    subscriptionAdapter.refresh(); // TODO LATER: adapter itself should refresh upon data set changed.
                     subscriptionAdapter.notifyDataSetChanged();
                 }, error -> Log.e(TAG, Log.getStackTraceString(error)));
     }
@@ -138,9 +190,10 @@ public class SubscriptionFragment extends Fragment {
         Object selectedObject = subscriptionAdapter.getSelectedItem();
         if (selectedObject == null) {
             Log.w(TAG, "onCreateContextMenu(): selected item is unexpectedly null");
+            return;
         }
 
-        if (selectedObject.equals(SubscriptionsAdapter.ADD_ITEM_OBJ)) {
+        if (selectedObject.equals(SubscriptionsByGroupAdapter.ADD_ITEM_OBJ)) {
             return;
         }
 
@@ -158,9 +211,10 @@ public class SubscriptionFragment extends Fragment {
         Object selectedObject = subscriptionAdapter.getSelectedItem();
         if (selectedObject == null) {
             Log.w(TAG, "onContextItemSelected(): selected item is unexpectedly null");
+            
         }
 
-        if (selectedObject.equals(SubscriptionsAdapter.ADD_ITEM_OBJ)) {
+        if (selectedObject.equals(SubscriptionsByGroupAdapter.ADD_ITEM_OBJ)) {
             // this is the add object, do nothing
             return false;
         }
@@ -261,7 +315,7 @@ public class SubscriptionFragment extends Fragment {
         }
     };
 
-    private final SubscriptionsAdapter.ItemAccess itemAccess = new SubscriptionsAdapter.ItemAccess() {
+    private final ItemAccess itemAccess = new ItemAccess() {
         @Override
         public int getCount() {
             if (navDrawerData != null) {
@@ -285,4 +339,5 @@ public class SubscriptionFragment extends Fragment {
             return navDrawerData != null ? navDrawerData.feedCounters.get(feedId) : 0;
         }
     };
+
 }

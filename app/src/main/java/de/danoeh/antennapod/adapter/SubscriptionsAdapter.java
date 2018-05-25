@@ -20,6 +20,7 @@ import de.danoeh.antennapod.core.feed.Feed;
 import de.danoeh.antennapod.core.glide.ApGlideSettings;
 import de.danoeh.antennapod.fragment.AddFeedFragment;
 import de.danoeh.antennapod.fragment.ItemlistFragment;
+import de.danoeh.antennapod.fragment.SubscriptionFragment;
 import jp.shts.android.library.TriangleLabelView;
 
 /**
@@ -33,12 +34,6 @@ public class SubscriptionsAdapter extends RecyclerView.Adapter<SubscriptionsAdap
     /** the position in the view that holds the add item; 0 is the first, -1 is the last position */
     private static final int ADD_POSITION = -1;
     private static final String TAG = "SubscriptionsAdapter";
-
-    public interface ItemAccess {
-        int getCount();
-        Feed getItem(int position);
-        int getFeedCounter(long feedId);
-    }
 
     public class ViewHolder extends RecyclerView.ViewHolder
             implements View.OnClickListener, View.OnLongClickListener {
@@ -124,11 +119,11 @@ public class SubscriptionsAdapter extends RecyclerView.Adapter<SubscriptionsAdap
     }
 
     private final WeakReference<MainActivity> mainActivityRef;
-    private final ItemAccess itemAccess;
+    private final SubscriptionFragment.ItemAccess itemAccess;
 
     private Object selectedItem; // for the use with binding item context menu
 
-    public SubscriptionsAdapter(MainActivity mainActivity, ItemAccess itemAccess) {
+    public SubscriptionsAdapter(MainActivity mainActivity, SubscriptionFragment.ItemAccess itemAccess) {
         this.mainActivityRef = new WeakReference<>(mainActivity);
         this.itemAccess = itemAccess;
     }
