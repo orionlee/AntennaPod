@@ -12,6 +12,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
+import com.h6ah4i.android.widget.advrecyclerview.draggable.DraggableItemViewHolder;
+import com.h6ah4i.android.widget.advrecyclerview.draggable.annotation.DraggableItemStateFlags;
 import com.h6ah4i.android.widget.advrecyclerview.utils.AbstractExpandableItemAdapter;
 import com.h6ah4i.android.widget.advrecyclerview.utils.AbstractExpandableItemViewHolder;
 
@@ -68,7 +70,8 @@ public class SubscriptionsByGroupAdapter extends
     // TODO LATER: factor out common codes with SubscriptionAdapter
     // (Or make the fragment use this adapter for both by group or flat list case)
     public class FeedViewHolder extends AbstractExpandableItemViewHolder
-            implements View.OnClickListener, View.OnLongClickListener {
+            implements View.OnClickListener, View.OnLongClickListener,
+            DraggableItemViewHolder {
 
         private final TextView txtvTitle;
         private final ImageView imgvCover;
@@ -120,13 +123,35 @@ public class SubscriptionsByGroupAdapter extends
         // in parent SubscriptionFragment can have access to the backing feed object.
         @Override
         public boolean onLongClick(View v) {
+            //  TODO LATER: [draggable] exclude draggable area from invoking context menu (i.e., return false)
+            // It cannot be done here, as onLongClick does not provide the details on where the long-click
+            // happens.
+            // To do it properly, it might need to be done with the lower-level on touch listeners instead,
+            // Or maybe create a view for drag handle (and set on LongClick there)
             SubscriptionsByGroupAdapter.this.selectedItem = feed;
             return false;
         }
 
+        //
+        // Draggable support
+        //  TODO LATER: [draggable] it should not be done  here in the expandable interface layer. A hack for now
+
+        @DraggableItemStateFlags
+        private int mDragStateFlags;
+
+        @Override
+        public void setDragStateFlags(@DraggableItemStateFlags int flags) {
+            mDragStateFlags = flags;
+        }
+
+        @Override
+        @DraggableItemStateFlags
+        public int getDragStateFlags() {
+            return mDragStateFlags;
+        }
     }
 
-    private static class Group {
+    protected static class Group {
         private final long id;
         private final String title;
         private final List<Feed> feeds;
@@ -156,6 +181,14 @@ public class SubscriptionsByGroupAdapter extends
             return feeds.add(feed);
         }
 
+        public boolean remove(Object o) {
+            return feeds.remove(o);
+        }
+
+        public Feed get(int index) {
+            return feeds.get(index);
+        }
+
         public boolean isExpanded() {
             return expanded;
         }
@@ -166,7 +199,7 @@ public class SubscriptionsByGroupAdapter extends
 
     }
 
-    private static class Groups {
+    protected static class Groups {
         private final List<Group> groups;
         private final List<Object> flattenedItemList;
 
@@ -247,7 +280,7 @@ public class SubscriptionsByGroupAdapter extends
     private final WeakReference<MainActivity> mainActivityRef;
     private final SubscriptionFragment.ItemAccess itemAccess;
 
-    private final Groups groups;
+    protected final Groups groups;
 
     // UI states
     private Feed selectedItem; // for the use with binding item context menu

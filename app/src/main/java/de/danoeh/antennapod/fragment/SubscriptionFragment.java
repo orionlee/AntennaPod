@@ -18,12 +18,14 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.h6ah4i.android.widget.advrecyclerview.draggable.RecyclerViewDragDropManager;
 import com.h6ah4i.android.widget.advrecyclerview.expandable.RecyclerViewExpandableItemManager;
 import com.h6ah4i.android.widget.advrecyclerview.utils.WrapperAdapterUtils;
 
 import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.activity.MainActivity;
 import de.danoeh.antennapod.adapter.SubscriptionsByGroupAdapter;
+import de.danoeh.antennapod.adapter.SubscriptionsByGroupDraggableAdapter;
 import de.danoeh.antennapod.core.asynctask.FeedRemover;
 import de.danoeh.antennapod.core.dialog.ConfirmationDialog;
 import de.danoeh.antennapod.core.feed.EventDistributor;
@@ -60,6 +62,7 @@ public class SubscriptionFragment extends Fragment {
     private RecyclerView subscriptionLayout;
     private SubscriptionsByGroupAdapter subscriptionAdapter;
     private RecyclerViewExpandableItemManager expandableItemManager;
+    private RecyclerViewDragDropManager dragDropManager;
     private RecyclerView.Adapter wrappedSubscriptionAdapter;
 
     private DBReader.NavDrawerData navDrawerData;
@@ -96,7 +99,7 @@ public class SubscriptionFragment extends Fragment {
         // TODO LATER: support by group UI and flattened list UI,
         // either by supporting both SubscriptionAdapter and SubscriptionsByGroupAdapter,
         // or make SubscriptionsByGroupAdapter covers flattened list UI case
-        subscriptionAdapter = new SubscriptionsByGroupAdapter(getMainActivity(), itemAccess);
+        subscriptionAdapter = new SubscriptionsByGroupDraggableAdapter(getMainActivity(), itemAccess);
 
         // Setup expandable feature and RecyclerView. Based on
         // https://github.com/h6ah4i/android-advancedrecyclerview/blob/0.11.0/example/src/main/java/com/h6ah4i/android/example/advrecyclerview/demo_e_basic/ExpandableExampleFragment.java
@@ -121,6 +124,15 @@ public class SubscriptionFragment extends Fragment {
 
         }
 
+        // Add drag-and-drop feature on top of exapndable one above
+        // https://github.com/h6ah4i/android-advancedrecyclerview/blob/0.11.0/example/src/main/java/com/h6ah4i/android/example/advrecyclerview/demo_ed_with_section/ExpandableDraggableWithSectionExampleFragment.java
+        {
+            dragDropManager = new RecyclerViewDragDropManager();
+            wrappedSubscriptionAdapter = dragDropManager.createWrappedAdapter(wrappedSubscriptionAdapter);
+            subscriptionLayout.setAdapter(wrappedSubscriptionAdapter);
+            dragDropManager.attachRecyclerView(subscriptionLayout);
+        }
+
         loadSubscriptions();
 
         getMainActivity().getSupportActionBar().setTitle(R.string.subscriptions_label);
@@ -137,6 +149,11 @@ public class SubscriptionFragment extends Fragment {
         if (expandableItemManager != null) {
             expandableItemManager.release();
             expandableItemManager = null;
+        }
+
+        if (dragDropManager!= null) {
+            dragDropManager.release();
+            dragDropManager= null;
         }
 
         if (subscriptionLayout != null) {
@@ -178,6 +195,9 @@ public class SubscriptionFragment extends Fragment {
     // Make group span entire row
     private void setupGridLayoutManagerForGroups(GridLayoutManager layoutManager) {
 
+        //  TODO LATER: [draggable] during dragging, it incorrectly make some feed
+        //  be shown as a group (occupying entire row), the reason is that during dragging,
+        //   getGroupByFlattenedPosition(position) is not accurate.
         final int spanCount = layoutManager.getSpanCount();
         layoutManager.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
             @Override

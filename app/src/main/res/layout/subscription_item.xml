@@ -34,4 +34,16 @@
         app:primaryTextColor="@color/white"
         app:primaryTextSize="12sp">
     </jp.shts.android.library.TriangleLabelView>
+
+    <ImageView
+        android:id="@+id/drag_handle"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:contentDescription="@string/drag_handle_content_description"
+        android:scaleType="fitXY"
+        android:src="?attr/dragview_background"
+        android:gravity="left"
+        tools:src="@drawable/ic_drag_vertical_grey600_48dp"
+        tools:background="@android:color/holo_green_dark" />
+
 </FrameLayout>
