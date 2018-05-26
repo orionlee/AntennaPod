@@ -1,6 +1,11 @@
 package de.danoeh.antennapod.adapter;
 
+import android.view.View;
+import android.view.ViewGroup;
+
+import com.h6ah4i.android.widget.advrecyclerview.draggable.DraggableItemViewHolder;
 import com.h6ah4i.android.widget.advrecyclerview.draggable.ItemDraggableRange;
+import com.h6ah4i.android.widget.advrecyclerview.draggable.annotation.DraggableItemStateFlags;
 import com.h6ah4i.android.widget.advrecyclerview.expandable.ExpandableDraggableItemAdapter;
 
 import de.danoeh.antennapod.activity.MainActivity;
@@ -9,20 +14,54 @@ import de.danoeh.antennapod.fragment.SubscriptionFragment;
 
 public class SubscriptionsByGroupDraggableAdapter extends SubscriptionsByGroupAdapter
         implements ExpandableDraggableItemAdapter<SubscriptionsByGroupAdapter.GroupViewHolder,
-            SubscriptionsByGroupAdapter.FeedViewHolder> {
+        SubscriptionsByGroupDraggableAdapter.FeedDraggableViewHolder> {
+
+    public class FeedDraggableViewHolder extends FeedViewHolder
+            implements DraggableItemViewHolder {
+
+        public FeedDraggableViewHolder(View itemView) {
+            super(itemView);
+        }
+
+        // Based on AbstractDraggableItemViewHolder
+
+        @DraggableItemStateFlags
+        private int mDragStateFlags;
+
+        @Override
+        public void setDragStateFlags(@DraggableItemStateFlags int flags) {
+            mDragStateFlags = flags;
+        }
+
+        @Override
+        @DraggableItemStateFlags
+        public int getDragStateFlags() {
+            return mDragStateFlags;
+        }
+    }
 
     public SubscriptionsByGroupDraggableAdapter(MainActivity mainActivity, SubscriptionFragment.ItemAccess itemAccess) {
         super(mainActivity, itemAccess);
     }
 
     @Override
-    public boolean onCheckChildCanStartDrag(FeedViewHolder holder, int groupPosition, int childPosition, int x, int y) {
+    public FeedDraggableViewHolder onCreateChildViewHolder(ViewGroup parent, int viewType) {
+        View view = createChildView(parent, viewType);
+        return new FeedDraggableViewHolder(view);
+    }
+
+    //
+    // Drag Drop API implementation
+    //
+
+    @Override
+    public boolean onCheckChildCanStartDrag(FeedDraggableViewHolder  holder, int groupPosition, int childPosition, int x, int y) {
         // TODO LATER: can drag when the touch position is in left 1/3 of the item
         return (x < holder.itemView.getWidth() * 0.33);
     }
 
     @Override
-    public ItemDraggableRange onGetChildItemDraggableRange(FeedViewHolder holder, int groupPosition, int childPosition) {
+    public ItemDraggableRange onGetChildItemDraggableRange(FeedDraggableViewHolder holder, int groupPosition, int childPosition) {
         return null; // default: all places permissible
     }
 

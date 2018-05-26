@@ -12,8 +12,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
-import com.h6ah4i.android.widget.advrecyclerview.draggable.DraggableItemViewHolder;
-import com.h6ah4i.android.widget.advrecyclerview.draggable.annotation.DraggableItemStateFlags;
 import com.h6ah4i.android.widget.advrecyclerview.utils.AbstractExpandableItemAdapter;
 import com.h6ah4i.android.widget.advrecyclerview.utils.AbstractExpandableItemViewHolder;
 
@@ -70,8 +68,7 @@ public class SubscriptionsByGroupAdapter extends
     // TODO LATER: factor out common codes with SubscriptionAdapter
     // (Or make the fragment use this adapter for both by group or flat list case)
     public class FeedViewHolder extends AbstractExpandableItemViewHolder
-            implements View.OnClickListener, View.OnLongClickListener,
-            DraggableItemViewHolder {
+            implements View.OnClickListener, View.OnLongClickListener {
 
         private final TextView txtvTitle;
         private final ImageView imgvCover;
@@ -130,24 +127,6 @@ public class SubscriptionsByGroupAdapter extends
             // Or maybe create a view for drag handle (and set on LongClick there)
             SubscriptionsByGroupAdapter.this.selectedItem = feed;
             return false;
-        }
-
-        //
-        // Draggable support
-        //  TODO LATER: [draggable] it should not be done  here in the expandable interface layer. A hack for now
-
-        @DraggableItemStateFlags
-        private int mDragStateFlags;
-
-        @Override
-        public void setDragStateFlags(@DraggableItemStateFlags int flags) {
-            mDragStateFlags = flags;
-        }
-
-        @Override
-        @DraggableItemStateFlags
-        public int getDragStateFlags() {
-            return mDragStateFlags;
         }
     }
 
@@ -400,9 +379,13 @@ public class SubscriptionsByGroupAdapter extends
         return new GroupViewHolder(view);
     }
 
+    protected View createChildView(ViewGroup parent, int viewType) {
+        return LayoutInflater.from(parent.getContext()).inflate(R.layout.subscription_item, parent, false);
+    }
+
     @Override
     public FeedViewHolder onCreateChildViewHolder(ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.subscription_item, parent, false);
+        View view = createChildView(parent, viewType);
         return new FeedViewHolder(view);
     }
 
