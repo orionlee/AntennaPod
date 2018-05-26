@@ -16,8 +16,8 @@ import de.danoeh.antennapod.fragment.SubscriptionFragment;
 public class SubscriptionsByGroupDraggableAdapter extends SubscriptionsByGroupAdapter
         implements ExpandableDraggableItemAdapter<SubscriptionsByGroupAdapter.GroupViewHolder,
             SubscriptionsByGroupDraggableAdapter.FeedDraggableViewHolder>,
-        GroupNonDraggableMixIn<SubscriptionsByGroupAdapter.GroupViewHolder,
-                SubscriptionsByGroupDraggableAdapter.FeedDraggableViewHolder> {
+        GroupNonDraggableTrait<SubscriptionsByGroupAdapter.GroupViewHolder,
+                        SubscriptionsByGroupDraggableAdapter.FeedDraggableViewHolder> {
 
     public class FeedDraggableViewHolder extends FeedViewHolder
             implements DraggableItemViewHolder {
@@ -98,7 +98,10 @@ public class SubscriptionsByGroupDraggableAdapter extends SubscriptionsByGroupAd
 
 }
 
-interface GroupNonDraggableMixIn<GVH extends RecyclerView.ViewHolder, CVH extends RecyclerView.ViewHolder>
+/**
+ * A trait that provides implementation for groups that are not draggable.
+ */
+interface GroupNonDraggableTrait<GVH extends RecyclerView.ViewHolder, CVH extends RecyclerView.ViewHolder>
         extends ExpandableDraggableItemAdapter<GVH, CVH> {
     default boolean onCheckGroupCanStartDrag(GVH holder, int groupPosition, int x, int y) {
         return false;
