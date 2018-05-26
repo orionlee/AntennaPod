@@ -1,5 +1,6 @@
 package de.danoeh.antennapod.adapter;
 
+import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -14,7 +15,9 @@ import de.danoeh.antennapod.fragment.SubscriptionFragment;
 
 public class SubscriptionsByGroupDraggableAdapter extends SubscriptionsByGroupAdapter
         implements ExpandableDraggableItemAdapter<SubscriptionsByGroupAdapter.GroupViewHolder,
-        SubscriptionsByGroupDraggableAdapter.FeedDraggableViewHolder> {
+            SubscriptionsByGroupDraggableAdapter.FeedDraggableViewHolder>,
+        GroupNonDraggableMixIn<SubscriptionsByGroupAdapter.GroupViewHolder,
+                SubscriptionsByGroupDraggableAdapter.FeedDraggableViewHolder> {
 
     public class FeedDraggableViewHolder extends FeedViewHolder
             implements DraggableItemViewHolder {
@@ -93,37 +96,31 @@ public class SubscriptionsByGroupDraggableAdapter extends SubscriptionsByGroupAd
         notifyDataSetChanged();
     }
 
-    // Groups not draggable
-    // TODO LATER OPEN: refactor them to a MixIn using default methods in interface (ran into syntax problem with generics)
+}
 
-    @Override
-    public boolean onCheckGroupCanStartDrag(SubscriptionsByGroupAdapter.GroupViewHolder holder, int groupPosition, int x, int y) {
+interface GroupNonDraggableMixIn<GVH extends RecyclerView.ViewHolder, CVH extends RecyclerView.ViewHolder>
+        extends ExpandableDraggableItemAdapter<GVH, CVH> {
+    default boolean onCheckGroupCanStartDrag(GVH holder, int groupPosition, int x, int y) {
         return false;
     }
 
-    @Override
-    public ItemDraggableRange onGetGroupItemDraggableRange(SubscriptionsByGroupAdapter.GroupViewHolder holder, int groupPosition) {
+    default ItemDraggableRange onGetGroupItemDraggableRange(GVH holder, int groupPosition) {
         throw new UnsupportedOperationException("Group is not draggable");
     }
 
-    @Override
-    public void onMoveGroupItem(int fromGroupPosition, int toGroupPosition) {
+    default void onMoveGroupItem(int fromGroupPosition, int toGroupPosition) {
         throw new UnsupportedOperationException("Group is not draggable");
     }
 
-    @Override
-    public boolean onCheckGroupCanDrop(int draggingGroupPosition, int dropGroupPosition) {
+    default boolean onCheckGroupCanDrop(int draggingGroupPosition, int dropGroupPosition) {
         return false;
     }
 
-    @Override
-    public void onGroupDragStarted(int groupPosition) {
+    default void onGroupDragStarted(int groupPosition) {
         throw new UnsupportedOperationException("Group is not draggable");
     }
 
-    @Override
-    public void onGroupDragFinished(int fromGroupPosition, int toGroupPosition, boolean result) {
+    default void onGroupDragFinished(int fromGroupPosition, int toGroupPosition, boolean result) {
         throw new UnsupportedOperationException("Group is not draggable");
     }
-
 }
