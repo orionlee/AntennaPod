@@ -131,6 +131,8 @@ public class SubscriptionFragment extends Fragment {
             wrappedSubscriptionAdapter = dragDropManager.createWrappedAdapter(wrappedSubscriptionAdapter);
             subscriptionLayout.setAdapter(wrappedSubscriptionAdapter);
             dragDropManager.attachRecyclerView(subscriptionLayout);
+
+            dragDropManager.setInitiateOnLongPress(false); // workaround to avoid conflicting with context menu
         }
 
         loadSubscriptions();
