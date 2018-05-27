@@ -34,6 +34,7 @@ import de.danoeh.antennapod.core.event.QueueEvent;
 import de.danoeh.antennapod.core.feed.EventDistributor;
 import de.danoeh.antennapod.core.feed.Feed;
 import de.danoeh.antennapod.core.feed.FeedEvent;
+import de.danoeh.antennapod.core.feed.FeedFile;
 import de.danoeh.antennapod.core.feed.FeedImage;
 import de.danoeh.antennapod.core.feed.FeedItem;
 import de.danoeh.antennapod.core.feed.FeedMedia;
@@ -384,7 +385,7 @@ public class DBWriter {
                                     new ItemEnqueuePositionCalculator.Options()
                                             .setEnqueueAtFront(UserPreferences.enqueueAtFront())
                                             .setKeepInProgressAtFront(UserPreferences.keepInProgressAtFront())
-                                            );
+                            );
 
                     for (int i = 0; i < itemIds.length; i++) {
                         if (!itemListContains(queue, itemIds[i])) {
@@ -452,6 +453,12 @@ public class DBWriter {
 
         private final @NonNull Options options;
 
+        /**
+         * The logic needs to use {@link DownloadRequester#isDownloadingFile(FeedFile)} method only
+         */
+        @VisibleForTesting
+        FeedFileDownloadStatusRequesterInterface requester = DownloadRequester.getInstance();
+
         public ItemEnqueuePositionCalculator(@NonNull Options options) {
             this.options = options;
         }
@@ -473,14 +480,42 @@ public class DBWriter {
                         curQueue.size() > 0 &&
                         curQueue.get(0).getMedia() != null &&
                         curQueue.get(0).getMedia().isInProgress()) {
-                    return positionAmongToAdd + 1; // leave the front in progress item at the front
+                    // leave the front in progress item at the front
+                    return getPositionOf1stNonDownloadingItem(positionAmongToAdd + 1, curQueue);
                 } else { // typical case
                     // return NOT 0, so that when a list of items are inserted, the items inserted
                     // keep the same order. Returning 0 will reverse the order
-                    return positionAmongToAdd;
+                    return getPositionOf1stNonDownloadingItem(positionAmongToAdd, curQueue);
                 }
             } else {
                 return curQueue.size();
+            }
+        }
+
+        private int getPositionOf1stNonDownloadingItem(int startPosition, List<FeedItem> curQueue) {
+            final int curQueueSize = curQueue.size();
+            for (int i = startPosition; i < curQueueSize; i++) {
+                if (!isItemAtPositionDownloading(i, curQueue)) {
+                    return i;
+                } // else continue to search;
+            }
+            return curQueueSize;
+        }
+
+        private boolean isItemAtPositionDownloading(int position, List<FeedItem> curQueue) {
+            FeedItem curItem;
+            try {
+                curItem = curQueue.get(position);
+            } catch (IndexOutOfBoundsException e) {
+                curItem = null;
+            }
+
+            if (curItem != null &&
+                    curItem.getMedia() != null &&
+                    requester.isDownloadingFile(curItem.getMedia())) {
+                return true;
+            } else {
+                return false;
             }
         }
     }
@@ -603,7 +638,7 @@ public class DBWriter {
             int index = queueIdList.indexOf(itemId);
             if (index >= 0) {
                 moveQueueItemHelper(index, queueIdList.size() - 1,
-                    broadcastUpdate);
+                        broadcastUpdate);
             } else {
                 Log.e(TAG, "moveQueueItemToBottom: item not found");
             }
