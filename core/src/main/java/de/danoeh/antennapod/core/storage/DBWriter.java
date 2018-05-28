@@ -476,50 +476,52 @@ public class DBWriter {
          */
         public int calcPosition(int positionAmongToAdd, FeedItem item, List<FeedItem> curQueue) {
             if (options.isEnqueueAtFront()) {
-                if (options.isKeepInProgressAtFront() &&
-                        curQueue.size() > 0 &&
-                        curQueue.get(0).getMedia() != null &&
-                        curQueue.get(0).getMedia().isInProgress()) {
-                    // leave the front in progress item at the front
-                    return getPositionOf1stNonDownloadingWithEqualOrLowerPriorityItem(positionAmongToAdd + 1, item, curQueue);
-                } else { // typical case
-                    // return NOT 0, so that when a list of items are inserted, the items inserted
-                    // keep the same order. Returning 0 will reverse the order
-                    return getPositionOf1stNonDownloadingWithEqualOrLowerPriorityItem(positionAmongToAdd, item, curQueue);
+                int startPos = positionAmongToAdd;
+                if (options.isKeepInProgressAtFront() && isItemAtFrontInProgress(curQueue)) {
+                    startPos = positionAmongToAdd + 1;
                 }
+                return getPositionOf1stItemMetConditions(startPos,
+                        item,
+                        curQueue,
+                        condItemAtPosEqualOrLowerPriority,
+                        condItemAtPosNotDownloading);
             } else {
                 if (item.getFeed().getPriority() == Feed.PRIORITY_HIGH) {
-                    // as if enqueued at front
-                    // TODO LATER: the logic is largely duplicated
-                    // TODO LATER: [BUG] if item at the front of the queue is also high priority, the
-                    //             item to be inserted should be put behind it, not in front of it.
-                    if (curQueue.size() > 0 &&
-                            curQueue.get(0).getMedia() != null &&
-                            curQueue.get(0).getMedia().isInProgress()) {
-                        // leave the front in progress item at the front
-                        return getPositionOf1stNonDownloadingWithEqualOrLowerPriorityItem(1, item, curQueue);
-                    } else { // typical case
-                        // return NOT 0, so that when a list of items are inserted, the items inserted
-                        // keep the same order. Returning 0 will reverse the order
-                        return getPositionOf1stNonDownloadingWithEqualOrLowerPriorityItem(0, item, curQueue);
+                    // almost as if enqueued at front
+                    int startPos = 0;
+                    if (options.isKeepInProgressAtFront() && isItemAtFrontInProgress(curQueue)) {
+                        startPos = 1;
                     }
+                    return getPositionOf1stItemMetConditions(startPos,
+                            item,
+                            curQueue,
+                            condItemAtPosEqualOrLowerPriority, // put the new item to the end of high priority batch
+                            condItemAtPosNotDownloading);
                 } else {
                     return curQueue.size();
                 }
             }
         }
 
-        private int getPositionOf1stNonDownloadingWithEqualOrLowerPriorityItem(int startPosition,
-                                                                               FeedItem item,
-                                                                               List<FeedItem> curQueue) {
-            final int curQueueSize = curQueue.size();
-            for (int i = startPosition; i < curQueueSize; i++) {
-                if ( !isItemAtPositionDownloading(i, curQueue) &&
-                        item.getFeed().getPriority() >= curQueue.get(i).getFeed().getPriority()) {
-                    return i;
-                } // else continue to search;
-            }
-            return curQueueSize;
+        //
+        // calcPosition() implementation helpers
+        //
+        private interface Condition {
+            boolean met(int posInTest, FeedItem item, List<FeedItem> curQueue);
+        }
+
+
+        private final Condition condItemAtPosNotDownloading =
+                (posInTest, item, curQueue) -> !isItemAtPositionDownloading(posInTest, curQueue);
+
+        private final Condition condItemAtPosEqualOrLowerPriority =
+                (posInTest, item, curQueue) -> item.getFeed().getPriority() >= curQueue.get(posInTest).getFeed().getPriority();
+
+
+        private static boolean isItemAtFrontInProgress(List<FeedItem> curQueue) {
+            return curQueue.size() > 0 &&
+                    curQueue.get(0).getMedia() != null &&
+                    curQueue.get(0).getMedia().isInProgress();
         }
 
         private boolean isItemAtPositionDownloading(int position, List<FeedItem> curQueue) {
@@ -538,6 +540,27 @@ public class DBWriter {
                 return false;
             }
         }
+
+        private static int getPositionOf1stItemMetConditions(int startPosition,
+                                                             FeedItem item,
+                                                             List<FeedItem> curQueue,
+                                                             Condition... conditions) {
+            final int curQueueSize = curQueue.size();
+            for (int pos = startPosition; pos < curQueueSize; pos++) {
+                boolean metAll = true;
+                for (Condition cond : conditions) {
+                    if (!cond.met(pos, item, curQueue)) {
+                        metAll = false;
+                        break;
+                    }
+                }
+                if (metAll) {
+                    return pos;
+                }
+            }
+            return curQueueSize;
+        }
+
     }
 
     /**
