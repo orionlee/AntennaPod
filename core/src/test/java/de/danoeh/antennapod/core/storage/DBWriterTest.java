@@ -273,7 +273,7 @@ public class DBWriterTest {
                                 concat(101L, QUEUE_W_PRIORITY_IDS ),
                                 // 102L, of normal priority, remains at the back
                                 list(101L, 11L, 12L, 13L, 102L),
-                                list(103L, 101L, 11L, 12L, 13L, 102L), // TODO LATER: should be 101L, 103L
+                                list(101L, 103L, 11L, 12L, 13L, 102L),
                                 concat(QUEUE_W_PRIORITY_IDS, 201L ),
                                 // 202L, of high priority, is pushed to the front (as part of 201 - 202 bulk)
                                 list(202L, 11L, 12L, 13L, 201L),

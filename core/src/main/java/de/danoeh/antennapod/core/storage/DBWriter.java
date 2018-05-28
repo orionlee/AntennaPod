@@ -495,7 +495,7 @@ public class DBWriter {
                     return getPositionOf1stItemMetConditions(startPos,
                             item,
                             curQueue,
-                            condItemAtPosEqualOrLowerPriority, // put the new item to the end of high priority batch
+                            condItemAtPosLowerPriority, // put the new item to the end of high priority batch
                             condItemAtPosNotDownloading);
                 } else {
                     return curQueue.size();
@@ -517,6 +517,8 @@ public class DBWriter {
         private final Condition condItemAtPosEqualOrLowerPriority =
                 (posInTest, item, curQueue) -> item.getFeed().getPriority() >= curQueue.get(posInTest).getFeed().getPriority();
 
+        private final Condition condItemAtPosLowerPriority =
+                (posInTest, item, curQueue) -> item.getFeed().getPriority() > curQueue.get(posInTest).getFeed().getPriority();
 
         private static boolean isItemAtFrontInProgress(List<FeedItem> curQueue) {
             return curQueue.size() > 0 &&
