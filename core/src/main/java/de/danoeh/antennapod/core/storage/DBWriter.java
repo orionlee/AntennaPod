@@ -481,21 +481,41 @@ public class DBWriter {
                         curQueue.get(0).getMedia() != null &&
                         curQueue.get(0).getMedia().isInProgress()) {
                     // leave the front in progress item at the front
-                    return getPositionOf1stNonDownloadingItem(positionAmongToAdd + 1, curQueue);
+                    return getPositionOf1stNonDownloadingWithEqualOrLowerPriorityItem(positionAmongToAdd + 1, item, curQueue);
                 } else { // typical case
                     // return NOT 0, so that when a list of items are inserted, the items inserted
                     // keep the same order. Returning 0 will reverse the order
-                    return getPositionOf1stNonDownloadingItem(positionAmongToAdd, curQueue);
+                    return getPositionOf1stNonDownloadingWithEqualOrLowerPriorityItem(positionAmongToAdd, item, curQueue);
                 }
             } else {
-                return curQueue.size();
+                if (item.getFeed().getPriority() == Feed.PRIORITY_HIGH) {
+                    // as if enqueued at front
+                    // TODO LATER: the logic is largely duplicated
+                    // TODO LATER: [BUG] if item at the front of the queue is also high priority, the
+                    //             item to be inserted should be put behind it, not in front of it.
+                    if (curQueue.size() > 0 &&
+                            curQueue.get(0).getMedia() != null &&
+                            curQueue.get(0).getMedia().isInProgress()) {
+                        // leave the front in progress item at the front
+                        return getPositionOf1stNonDownloadingWithEqualOrLowerPriorityItem(1, item, curQueue);
+                    } else { // typical case
+                        // return NOT 0, so that when a list of items are inserted, the items inserted
+                        // keep the same order. Returning 0 will reverse the order
+                        return getPositionOf1stNonDownloadingWithEqualOrLowerPriorityItem(0, item, curQueue);
+                    }
+                } else {
+                    return curQueue.size();
+                }
             }
         }
 
-        private int getPositionOf1stNonDownloadingItem(int startPosition, List<FeedItem> curQueue) {
+        private int getPositionOf1stNonDownloadingWithEqualOrLowerPriorityItem(int startPosition,
+                                                                               FeedItem item,
+                                                                               List<FeedItem> curQueue) {
             final int curQueueSize = curQueue.size();
             for (int i = startPosition; i < curQueueSize; i++) {
-                if (!isItemAtPositionDownloading(i, curQueue)) {
+                if ( !isItemAtPositionDownloading(i, curQueue) &&
+                        item.getFeed().getPriority() >= curQueue.get(i).getFeed().getPriority()) {
                     return i;
                 } // else continue to search;
             }

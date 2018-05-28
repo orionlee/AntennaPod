@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import de.danoeh.antennapod.core.feed.Feed;
 import de.danoeh.antennapod.core.feed.FeedFile;
 import de.danoeh.antennapod.core.feed.FeedItem;
 import de.danoeh.antennapod.core.feed.FeedMedia;
@@ -256,6 +257,122 @@ public class DBWriterTest {
             }
         }
 
+        @RunWith(Parameterized.class)
+        public static class ItemEnqueueFeedPriorityTest {
+
+            @Parameters(name = "{index}: case<{0}>")
+            public static Iterable<Object[]> data() {
+                Options optDefault = new Options();
+                Options optEnqAtFront = new Options().setEnqueueAtFront(true);
+
+                // Attempts to make test more readable by showing the expected list of ids
+                // (rather than the expected positions)
+                return Arrays.asList(new Object[][] {
+                        {"feed priority test, enqueue default",
+                                // 101L, of high priority, still put to the front
+                                concat(101L, QUEUE_W_PRIORITY_IDS ),
+                                // 102L, of normal priority, remains at the back
+                                list(101L, 11L, 12L, 13L, 102L),
+                                list(103L, 101L, 11L, 12L, 13L, 102L), // TODO LATER: should be 101L, 103L
+                                concat(QUEUE_W_PRIORITY_IDS, 201L ),
+                                // 202L, of high priority, is pushed to the front (as part of 201 - 202 bulk)
+                                list(202L, 11L, 12L, 13L, 201L),
+                                optDefault, QUEUE_W_PRIORITY},
+                        {"feed priority test, enqueue at front",
+                                concat(101L, QUEUE_W_PRIORITY_IDS ),
+                                // 102L, of normal priority, will be put behind 101L,
+                                // instead of being enqueued at front
+                                // OPEN: what happens if 101L and 102L are both in the midst of downloading?
+                                // i.e., how does priority rule interact with respect download order rules?
+                                concat(list(101L, 102L), QUEUE_W_PRIORITY_IDS ),
+                                concat(list(103L, 101L, 102L), QUEUE_W_PRIORITY_IDS ),
+                                concat(list(201L), QUEUE_W_PRIORITY_IDS ),
+                                // OPEN: 202L, of high priority, is NOT pushed to the front
+                                // (as part of 201 - 202 bulk insertion).
+                                // To push 202L to the front, callers should first sort the items to be queued
+                                // based on priority before making the call.
+                                concat(list(201L, 202L), QUEUE_W_PRIORITY_IDS ),
+                                optEnqAtFront, QUEUE_W_PRIORITY},
+                });
+            }
+
+            @Parameter
+            public String message;
+
+            @Parameter(1)
+            public List<Long> idsExpectedAfter101;
+
+            @Parameter(2)
+            public List<Long> idsExpectedAfter102;
+
+            @Parameter(3)
+            public List<Long> idsExpectedAfter103;
+
+            // 2XX are for testing bulk insertion cases
+            @Parameter(4)
+            public List<Long> idsExpectedAfter201;
+
+            @Parameter(5)
+            public List<Long> idsExpectedAfter202;
+
+            @Parameter(6)
+            public Options options;
+
+            @Parameter(7)
+            public List<FeedItem> queueInitial;
+
+            @Test
+            public void testFeedPriority() {
+                // Setup class under test
+                //
+                ItemEnqueuePositionCalculator calculator = new ItemEnqueuePositionCalculator(options);
+
+                // Setup initial data
+                // A shallow copy, as the test code will manipulate the queue
+                List<FeedItem> queue = new ArrayList<>(queueInitial);
+
+                // Test body
+
+                // User download on feed item 101, high priority
+                FeedItem tFI101 = tFI_priority(101, TF_P_HIGH_ID);
+                doAddToQueueAndAssertResult(message + " (1st download [high priority])",
+                        calculator, 0, tFI101, queue,
+                        idsExpectedAfter101);
+
+                FeedItem tFI102 = tFI_priority(102, TF_P_NORMAL_ID);
+                doAddToQueueAndAssertResult(message + " (2nd download [normal priority])",
+                        calculator, 0, tFI102, queue,
+                        idsExpectedAfter102);
+
+                FeedItem tFI103 = tFI_priority(103, TF_P_HIGH_ID);
+                doAddToQueueAndAssertResult(message + " (3rd download [high priority])",
+                        calculator, 0, tFI103, queue,
+                        idsExpectedAfter103);
+
+                // Reset the queue for bulk insertion case (in auto download?)
+                queue = new ArrayList<>(queueInitial);
+
+                FeedItem tFI201 = tFI_priority(201, TF_P_NORMAL_ID);
+                doAddToQueueAndAssertResult(message + " (bulk insertion, 1st item [normal priority])",
+                        calculator, 0, tFI201, queue,
+                        idsExpectedAfter201);
+
+                FeedItem tFI202 = tFI_priority(202, TF_P_HIGH_ID);
+                doAddToQueueAndAssertResult(message + " (bulk insertion, 2nd item [high priority])",
+                        calculator, 1, tFI202, queue,
+                        idsExpectedAfter202);
+            }
+
+            private static List<FeedItem> QUEUE_W_PRIORITY =
+                    Collections.unmodifiableList(
+                            Arrays.asList(tFI_priority(11L, TF_P_NORMAL_ID),
+                                    tFI_priority(12L, TF_P_HIGH_ID),
+                                    tFI_priority(13L, TF_P_NORMAL_ID)));
+
+            private static final List<Long> QUEUE_W_PRIORITY_IDS =
+                    QUEUE_W_PRIORITY.stream().map(fi -> fi.getId()).collect(Collectors.toList());
+
+        }
 
         // Common helpers:
         // - common queue (of items) for tests
@@ -300,6 +417,24 @@ public class DBWriterTest {
                     new Date(), FeedItem.PLAYED, FeedMother.anyFeed());
             return item;
         }
+
+        static final long TF_P_NORMAL_ID = 1;
+        static final long TF_P_HIGH_ID = 2;
+        static final Map<Long, Integer> T_FEED_PRIORITIES;
+        static {
+            T_FEED_PRIORITIES = new HashMap<Long, Integer>();
+            T_FEED_PRIORITIES.put(TF_P_NORMAL_ID, Feed.PRIORITY_NORMAL);
+            T_FEED_PRIORITIES.put(TF_P_HIGH_ID, Feed.PRIORITY_HIGH);
+        }
+
+        static FeedItem tFI_priority(long itemId, long feedId) {
+            FeedItem item = tFI(itemId);
+            item.getFeed().setId(feedId);
+            item.getFeed().setPriority(T_FEED_PRIORITIES.getOrDefault(feedId, Feed.PRIORITY_NORMAL));
+
+            return item;
+        }
+
 
         // Collections helpers
 

@@ -5,11 +5,13 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.support.annotation.Nullable;
-import android.support.v4.content.ContextCompat;
+import android.support.annotation.VisibleForTesting;
 import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -425,15 +427,18 @@ public final class DBTasks {
 
             }.start();
         }
+
+        final FeedItem[] sortedItems = toFeedItemsOrderedByPriority(items);
+
         // #2448: First, add to-download items to the queue before actual download
         // so that the resulting queue order is the same as when download is clicked
-        DBWriter.addQueueItem(context, items);
+        DBWriter.addQueueItem(context, sortedItems);
         // Then, download them
-        for (FeedItem item : items) {
+        for (FeedItem item : sortedItems) {
             if (item.getMedia() != null
                     && !requester.isDownloadingFile(item.getMedia())
                     && !item.getMedia().isDownloaded()) {
-                if (items.length > 1) {
+                if (sortedItems.length > 1) {
                     try {
                         requester.downloadMedia(context, item.getMedia());
                     } catch (DownloadRequestException e) {
@@ -452,6 +457,18 @@ public final class DBTasks {
                 }
             }
         }
+    }
+
+    @VisibleForTesting
+    static FeedItem[] toFeedItemsOrderedByPriority(FeedItem... items) {
+        FeedItem[] sortedItems = Arrays.copyOf(items, items.length);
+        Arrays.sort(sortedItems, new Comparator<FeedItem>() {
+            @Override
+            public int compare(FeedItem o1, FeedItem o2) {
+                return o2.getFeed().getPriority() - o1.getFeed().getPriority();
+            }
+        });
+        return sortedItems;
     }
 
     /**
