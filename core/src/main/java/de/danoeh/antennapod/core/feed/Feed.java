@@ -1,9 +1,12 @@
 package de.danoeh.antennapod.core.feed;
 
 import android.database.Cursor;
+import android.support.annotation.IntDef;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -553,6 +556,31 @@ public class Feed extends FeedFile implements FlattrThing, ImageResource {
 
     public void setLastUpdateFailed(boolean lastUpdateFailed) {
         this.lastUpdateFailed = lastUpdateFailed;
+    }
+
+
+    public static final int PRIORITY_HIGH = 4;
+    public static final int PRIORITY_NORMAL = 3;
+
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef({PRIORITY_NORMAL, PRIORITY_HIGH})
+    public @interface Priority {}
+
+    private int priority = -1;
+
+    public @Priority int getPriority() {
+        switch (priority) {
+            case PRIORITY_HIGH:
+                return PRIORITY_HIGH;
+            case PRIORITY_NORMAL:
+                return PRIORITY_NORMAL;
+            default:
+                return PRIORITY_NORMAL;
+        }
+    }
+
+    public void setPriority(@Priority int priority) {
+        this.priority = priority;
     }
 
 }
