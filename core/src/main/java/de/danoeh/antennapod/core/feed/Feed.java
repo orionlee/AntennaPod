@@ -2,6 +2,7 @@ package de.danoeh.antennapod.core.feed;
 
 import android.database.Cursor;
 import android.support.annotation.IntDef;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
 
@@ -569,7 +570,27 @@ public class Feed extends FeedFile implements FlattrThing, ImageResource {
     private int priority = -1;
 
     public @Priority int getPriority() {
-        switch (priority) {
+        @NonNull PriorityProvider providerToUse =
+                priorityProvider != null ? priorityProvider : defaultPriorityProvider;
+        return providerToUse.getPriority(this);
+    }
+
+    public void setPriority(@Priority int priority) {
+        this.priority = priority;
+    }
+
+    // PROTOTYPE ONLY:
+    // PriorityProvider: A (temporary) structure to supply priorities
+    // without changing underlying databases for now
+
+    public static PriorityProvider priorityProvider;
+
+    public interface PriorityProvider {
+        @Priority int getPriority(@NonNull Feed feed);
+    }
+
+    private static PriorityProvider defaultPriorityProvider = (feed) -> {
+        switch (feed.priority) {
             case PRIORITY_HIGH:
                 return PRIORITY_HIGH;
             case PRIORITY_NORMAL:
@@ -577,10 +598,6 @@ public class Feed extends FeedFile implements FlattrThing, ImageResource {
             default:
                 return PRIORITY_NORMAL;
         }
-    }
-
-    public void setPriority(@Priority int priority) {
-        this.priority = priority;
-    }
+    };
 
 }

@@ -8,8 +8,12 @@ import com.joanzapata.iconify.Iconify;
 import com.joanzapata.iconify.fonts.FontAwesomeModule;
 import com.joanzapata.iconify.fonts.MaterialModule;
 
+import java.util.Arrays;
+import java.util.List;
+
 import de.danoeh.antennapod.core.ClientConfig;
 import de.danoeh.antennapod.core.feed.EventDistributor;
+import de.danoeh.antennapod.core.feed.Feed;
 import de.danoeh.antennapod.spa.SPAUtil;
 
 /** Main application class. */
@@ -52,6 +56,22 @@ public class PodcastApp extends Application {
 		singleton = this;
 
 		ClientConfig.initialize(this);
+
+		// PROTOTYPE ONLY: feed with high priority
+		Feed.priorityProvider = (feed) -> {
+			final List<String> highPriTitles = Arrays.asList(
+					"The Record",
+					"Up First",
+					"The Daily",
+					"Science Friday",
+					"CBC News: The World This Weekend"
+			);
+			if (highPriTitles.contains(feed.getTitle())) {
+				return Feed.PRIORITY_HIGH;
+			} else {
+				return Feed.PRIORITY_NORMAL;
+			}
+		};
 
 		EventDistributor.getInstance();
 		Iconify.with(new FontAwesomeModule());
