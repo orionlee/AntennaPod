@@ -32,6 +32,31 @@
                 app:rowCount="1">
 
                 <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Priority"
+                    app:layout_row="0"
+                    app:layout_column="0"
+                    app:layout_gravity="center_vertical"
+                    android:layout_marginRight="10dp" />
+
+                <TextView
+                    android:id="@+id/txtvFeedPriorityVal"
+                    android:text="Normal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="@dimen/text_size_small"
+                    android:textColor="?android:attr/textColorPrimary" />
+            </android.support.v7.widget.GridLayout>
+
+            <android.support.v7.widget.GridLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                app:columnCount="2"
+                app:rowCount="1">
+
+                <TextView
                     android:id="@+id/txtvFeedAutoDelete"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

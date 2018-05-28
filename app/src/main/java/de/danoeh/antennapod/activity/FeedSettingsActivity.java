@@ -25,7 +25,9 @@ import android.widget.RadioButton;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import com.bumptech.glide.Glide;
+
 import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.core.dialog.ConfirmationDialog;
 import de.danoeh.antennapod.core.dialog.DownloadRequestErrorDialogCreator;
@@ -184,6 +186,11 @@ public class FeedSettingsActivity extends AppCompatActivity {
 
                     if (!TextUtils.isEmpty(feed.getAuthor())) {
                         txtvAuthorHeader.setText(feed.getAuthor());
+                    }
+
+                    // PROTOTYPE ONLY
+                    if (feed.getPriority() == Feed.PRIORITY_HIGH) {
+                        ((TextView)findViewById(R.id.txtvFeedPriorityVal)).setText("Priority: High");
                     }
 
                     cbxAutoDownload.setEnabled(UserPreferences.isEnableAutodownload());
