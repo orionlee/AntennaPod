@@ -29,7 +29,7 @@ public class DBTasksTest {
                 items, Arrays.asList(51L, 53L, 50L, 52L));
 
         doTestToFeedItemsOrderedByPriority("Boundary case",
-                new FeedItem[0], Collections.EMPTY_LIST);
+                new FeedItem[0], Collections.emptyList());
 
     }
 

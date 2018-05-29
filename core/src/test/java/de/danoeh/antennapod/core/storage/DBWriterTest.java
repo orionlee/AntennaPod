@@ -463,6 +463,8 @@ public class DBWriterTest {
             return res;
         }
 
+        @SafeVarargs
+        @SuppressWarnings("varargs")
         public static <T> List<T> list(T... a) {
             return Arrays.asList(a);
         }
