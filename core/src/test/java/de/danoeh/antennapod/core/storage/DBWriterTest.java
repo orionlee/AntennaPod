@@ -269,32 +269,39 @@ public class DBWriterTest {
                 // (rather than the expected positions)
                 return Arrays.asList(new Object[][] {
                         {"feed priority test, enqueue default",
-                                // 101L, of high priority, still put to the front
-                                concat(101L, QUEUE_W_PRIORITY_IDS ),
-                                // 102L, of normal priority, remains at the back
-                                list(101L, 11L, 12L, 13L, 102L),
-                                list(101L, 103L, 11L, 12L, 13L, 102L),
-                                concat(QUEUE_W_PRIORITY_IDS, 201L ),
-                                // 202L, of high priority, is pushed to the front (as part of 201 - 202 bulk)
-                                list(202L, 11L, 12L, 13L, 201L),
+                                // 101, of high priority, still put to the front
+                                concat(T101H, QUEUE_W_PRIORITY_IDS ),
+                                // 102, of normal priority, remains at the back
+                                list(T101H, 11L, 12L, 13L, T102N),
+                                list(T101H, T103H, 11L, 12L, 13L, T102N),
+                                concat(QUEUE_W_PRIORITY_IDS, T201N ),
+                                // 202, of high priority, is pushed to the front (as part of 201 - 202 bulk)
+                                list(T202H, 11L, 12L, 13L, T201N),
                                 optDefault, QUEUE_W_PRIORITY},
+
                         {"feed priority test, enqueue at front",
-                                concat(101L, QUEUE_W_PRIORITY_IDS ),
-                                // 102L, of normal priority, will be put behind 101L,
+                                concat(T101H, QUEUE_W_PRIORITY_IDS ),
+                                // 102, of normal priority, will be put behind 101,
                                 // instead of being enqueued at front
-                                // OPEN: what happens if 101L and 102L are both in the midst of downloading?
+                                // OPEN: what happens if 101 and 102 are both in the midst of downloading?
                                 // i.e., how does priority rule interact with respect download order rules?
-                                concat(list(101L, 102L), QUEUE_W_PRIORITY_IDS ),
-                                concat(list(103L, 101L, 102L), QUEUE_W_PRIORITY_IDS ),
-                                concat(list(201L), QUEUE_W_PRIORITY_IDS ),
-                                // OPEN: 202L, of high priority, is NOT pushed to the front
+                                concat(list(T101H, T102N), QUEUE_W_PRIORITY_IDS ),
+                                concat(list(T103H, T101H, T102N), QUEUE_W_PRIORITY_IDS ),
+                                concat(list(T201N), QUEUE_W_PRIORITY_IDS ),
+                                // OPEN: 202, of high priority, is NOT pushed to the front
                                 // (as part of 201 - 202 bulk insertion).
-                                // To push 202L to the front, callers should first sort the items to be queued
-                                // based on priority before making the call.
-                                concat(list(201L, 202L), QUEUE_W_PRIORITY_IDS ),
+                                // To push 202 to the front, callers should first sort the items to be queued
+                                // based on priority before making the call. See DBTasks#downloadFeedItems()
+                                concat(list(T201N, T202H), QUEUE_W_PRIORITY_IDS ),
                                 optEnqAtFront, QUEUE_W_PRIORITY},
                 });
             }
+
+            private static final long T101H = 101L;
+            private static final long T102N = 102L;
+            private static final long T103H = 103L;
+            private static final long T201N = 201L;
+            private static final long T202H = 202L;
 
             @Parameter
             public String message;
@@ -334,17 +341,17 @@ public class DBWriterTest {
                 // Test body
 
                 // User download on feed item 101, high priority
-                FeedItem tFI101 = tFI_priority(101, TF_P_HIGH_ID);
+                FeedItem tFI101 = tFI_priority(T101H, TF_P_HIGH_ID);
                 doAddToQueueAndAssertResult(message + " (1st download [high priority])",
                         calculator, 0, tFI101, queue,
                         idsExpectedAfter101);
 
-                FeedItem tFI102 = tFI_priority(102, TF_P_NORMAL_ID);
+                FeedItem tFI102 = tFI_priority(T102N, TF_P_NORMAL_ID);
                 doAddToQueueAndAssertResult(message + " (2nd download [normal priority])",
                         calculator, 0, tFI102, queue,
                         idsExpectedAfter102);
 
-                FeedItem tFI103 = tFI_priority(103, TF_P_HIGH_ID);
+                FeedItem tFI103 = tFI_priority(T103H, TF_P_HIGH_ID);
                 doAddToQueueAndAssertResult(message + " (3rd download [high priority])",
                         calculator, 0, tFI103, queue,
                         idsExpectedAfter103);
@@ -352,12 +359,12 @@ public class DBWriterTest {
                 // Reset the queue for bulk insertion case (in auto download?)
                 queue = new ArrayList<>(queueInitial);
 
-                FeedItem tFI201 = tFI_priority(201, TF_P_NORMAL_ID);
+                FeedItem tFI201 = tFI_priority(T201N, TF_P_NORMAL_ID);
                 doAddToQueueAndAssertResult(message + " (bulk insertion, 1st item [normal priority])",
                         calculator, 0, tFI201, queue,
                         idsExpectedAfter201);
 
-                FeedItem tFI202 = tFI_priority(202, TF_P_HIGH_ID);
+                FeedItem tFI202 = tFI_priority(T202H, TF_P_HIGH_ID);
                 doAddToQueueAndAssertResult(message + " (bulk insertion, 2nd item [high priority])",
                         calculator, 1, tFI202, queue,
                         idsExpectedAfter202);
