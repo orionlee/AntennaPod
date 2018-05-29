@@ -190,7 +190,7 @@ public class FeedSettingsActivity extends AppCompatActivity {
 
                     // PROTOTYPE ONLY
                     if (feed.getPriority() == Feed.PRIORITY_HIGH) {
-                        ((TextView)findViewById(R.id.txtvFeedPriorityVal)).setText("Priority: High");
+                        ((TextView)findViewById(R.id.txtvFeedPriorityVal)).setText("High");
                     }
 
                     cbxAutoDownload.setEnabled(UserPreferences.isEnableAutodownload());
