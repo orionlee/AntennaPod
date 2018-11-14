@@ -7,15 +7,10 @@ import android.support.test.espresso.contrib.RecyclerViewActions;
 import android.support.test.rule.ActivityTestRule;
 import android.support.test.runner.AndroidJUnit4;
 import android.view.View;
+
 import com.robotium.solo.Solo;
 import com.robotium.solo.Timeout;
-import de.danoeh.antennapod.R;
-import de.danoeh.antennapod.activity.PreferenceActivity;
-import de.danoeh.antennapod.core.preferences.UserPreferences;
-import de.danoeh.antennapod.core.storage.APCleanupAlgorithm;
-import de.danoeh.antennapod.core.storage.APNullCleanupAlgorithm;
-import de.danoeh.antennapod.core.storage.APQueueCleanupAlgorithm;
-import de.danoeh.antennapod.core.storage.EpisodeCleanupAlgorithm;
+
 import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Before;
@@ -25,6 +20,14 @@ import org.junit.runner.RunWith;
 
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+
+import de.danoeh.antennapod.R;
+import de.danoeh.antennapod.activity.PreferenceActivity;
+import de.danoeh.antennapod.core.preferences.UserPreferences;
+import de.danoeh.antennapod.core.storage.APCleanupAlgorithm;
+import de.danoeh.antennapod.core.storage.APNullCleanupAlgorithm;
+import de.danoeh.antennapod.core.storage.APQueueCleanupAlgorithm;
+import de.danoeh.antennapod.core.storage.EpisodeCleanupAlgorithm;
 
 import static android.support.test.InstrumentationRegistry.getInstrumentation;
 import static android.support.test.espresso.Espresso.onView;
@@ -393,7 +396,7 @@ public class PreferencesTest {
                     EpisodeCleanupAlgorithm alg = UserPreferences.getEpisodeCleanupAlgorithm();
                     if (alg instanceof APCleanupAlgorithm) {
                         APCleanupAlgorithm cleanupAlg = (APCleanupAlgorithm)alg;
-                        return cleanupAlg.getNumberOfDaysAfterPlayback() == 0;
+                        return cleanupAlg.getNumberOfHoursAfterPlayback() == 0;
                     }
                     return false;
                 },
@@ -412,7 +415,7 @@ public class PreferencesTest {
                     EpisodeCleanupAlgorithm alg = UserPreferences.getEpisodeCleanupAlgorithm();
                     if (alg instanceof APCleanupAlgorithm) {
                         APCleanupAlgorithm cleanupAlg = (APCleanupAlgorithm)alg;
-                        return cleanupAlg.getNumberOfDaysAfterPlayback() == 5;
+                        return cleanupAlg.getNumberOfHoursAfterPlayback() == 120; // 5 days
                     }
                     return false;
                 },
