@@ -4,8 +4,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
-import android.support.v4.app.Fragment;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -25,6 +25,7 @@ import android.widget.TextView;
 import com.yqritc.recyclerviewflexibledivider.HorizontalDividerItemDecoration;
 
 import java.util.List;
+import java.util.concurrent.Callable;
 
 import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.activity.MainActivity;
@@ -53,15 +54,12 @@ import de.danoeh.antennapod.core.util.QueueSorter;
 import de.danoeh.antennapod.menuhandler.FeedItemMenuHandler;
 import de.danoeh.antennapod.menuhandler.MenuItemUtils;
 import de.greenrobot.event.EventBus;
-import io.reactivex.Observable;
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.schedulers.Schedulers;
+import io.reactivex.functions.Consumer;
 
 /**
  * Shows all items in the queue
  */
-public class QueueFragment extends Fragment {
+public class QueueFragment extends RxFragmentTemplate<List<FeedItem>> {
 
     public static final String TAG = "QueueFragment";
 
@@ -84,7 +82,6 @@ public class QueueFragment extends Fragment {
     private static final String PREF_SCROLL_POSITION = "scroll_position";
     private static final String PREF_SCROLL_OFFSET = "scroll_offset";
 
-    private Disposable disposable;
     private LinearLayoutManager layoutManager;
     private ItemTouchHelper itemTouchHelper;
 
@@ -104,23 +101,53 @@ public class QueueFragment extends Fragment {
         }
     }
 
+    @NonNull
     @Override
-    public void onResume() {
-        super.onResume();
-        loadItems(true);
+    protected Callable<? extends List<FeedItem>> getMainRxSupplierCallable() {
+        return DBReader::getQueue;
+    }
+
+    private boolean restoreScrollQueuePosition = true;
+
+    @Override
+    protected void doOnResumePreRx() {
+        restoreScrollQueuePosition = true; // for main rx result consumer in onResume case
+    }
+
+    @Override
+    protected void doLoadMainPreRx() {
+        if (queue == null) {
+            recyclerView.setVisibility(View.GONE);
+            txtvEmpty.setVisibility(View.GONE);
+            progLoading.setVisibility(View.VISIBLE);
+        }
+    }
+
+    @NonNull
+    @Override
+    protected Consumer<? super List<FeedItem>> getMainRxResultConsumer() {
+        return items -> {
+            progLoading.setVisibility(View.GONE);
+            queue = items;
+            onFragmentLoaded(restoreScrollQueuePosition);
+            if (recyclerAdapter != null) {
+                recyclerAdapter.notifyDataSetChanged();
+            }
+        };
+    }
+
+    @Override
+    protected void doOnResumePostRx() {
         EventDistributor.getInstance().register(contentUpdate);
         EventBus.getDefault().registerSticky(this);
     }
 
     @Override
-    public void onPause() {
-        super.onPause();
+    protected void doOnPause() {
         saveScrollPosition();
         EventDistributor.getInstance().unregister(contentUpdate);
         EventBus.getDefault().unregister(this);
-        if(disposable != null) {
-            disposable.dispose();
-        }
+
     }
 
     public void onEventMainThread(QueueEvent event) {
@@ -423,9 +450,6 @@ public class QueueFragment extends Fragment {
 
                 @Override
                 public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
-                    if(disposable != null) {
-                        disposable.dispose();
-                    }
                     final int position = viewHolder.getAdapterPosition();
                     Log.d(TAG, "remove(" + position + ")");
                     final FeedItem item = queue.get(position);
@@ -613,35 +637,13 @@ public class QueueFragment extends Fragment {
         public void update(EventDistributor eventDistributor, Integer arg) {
             if ((arg & EVENTS) != 0) {
                 Log.d(TAG, "arg: " + arg);
-                loadItems(false);
+                restoreScrollQueuePosition = false;
+                loadMainRxContent();
                 if (isUpdatingFeeds != updateRefreshMenuItemChecker.isRefreshing()) {
                     getActivity().supportInvalidateOptionsMenu();
                 }
             }
         }
     };
-
-    private void loadItems(final boolean restoreScrollPosition) {
-        Log.d(TAG, "loadItems()");
-        if(disposable != null) {
-            disposable.dispose();
-        }
-        if (queue == null) {
-            recyclerView.setVisibility(View.GONE);
-            txtvEmpty.setVisibility(View.GONE);
-            progLoading.setVisibility(View.VISIBLE);
-        }
-        disposable = Observable.fromCallable(DBReader::getQueue)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(items -> {
-                    progLoading.setVisibility(View.GONE);
-                    queue = items;
-                    onFragmentLoaded(restoreScrollPosition);
-                    if(recyclerAdapter != null) {
-                        recyclerAdapter.notifyDataSetChanged();
-                    }
-                }, error -> Log.e(TAG, Log.getStackTraceString(error)));
-    }
 
 }
