@@ -53,13 +53,12 @@ import de.danoeh.antennapod.core.util.LongList;
 import de.danoeh.antennapod.core.util.QueueSorter;
 import de.danoeh.antennapod.menuhandler.FeedItemMenuHandler;
 import de.danoeh.antennapod.menuhandler.MenuItemUtils;
-import de.greenrobot.event.EventBus;
 import io.reactivex.functions.Consumer;
 
 /**
  * Shows all items in the queue
  */
-public class QueueFragment extends RxFragmentTemplate<List<FeedItem>> {
+public class QueueFragment extends RxWithContentUpdateFragmentTemplate<List<FeedItem>> {
 
     public static final String TAG = "QueueFragment";
 
@@ -101,6 +100,8 @@ public class QueueFragment extends RxFragmentTemplate<List<FeedItem>> {
         }
     }
 
+    // BEGIN For RxJava content loading
+
     @NonNull
     @Override
     protected Callable<? extends List<FeedItem>> getMainRxSupplierCallable() {
@@ -137,18 +138,33 @@ public class QueueFragment extends RxFragmentTemplate<List<FeedItem>> {
     }
 
     @Override
-    protected void doOnResumePostRx() {
-        EventDistributor.getInstance().register(contentUpdate);
-        EventBus.getDefault().registerSticky(this);
+    protected void doOnPause() {
+        saveScrollPosition();
+        super.doOnPause();
+    }
+
+    // END For RxJava content loading
+
+    // BEGIN For content update events handling
+
+    @Override
+    protected int getInterestedEvents() {
+        return EVENTS;
     }
 
     @Override
-    protected void doOnPause() {
-        saveScrollPosition();
-        EventDistributor.getInstance().unregister(contentUpdate);
-        EventBus.getDefault().unregister(this);
-
+    protected void doContentUpdatePrePx() {
+        restoreScrollQueuePosition = false; // for main rx result consumer in content update event case
     }
+
+    @Override
+    protected void doContentUpdatePostPx() {
+        if (isUpdatingFeeds != updateRefreshMenuItemChecker.isRefreshing()) {
+            getActivity().supportInvalidateOptionsMenu();
+        }
+    }
+
+    // END For content update events handling
 
     public void onEventMainThread(QueueEvent event) {
         Log.d(TAG, "onEventMainThread() called with: " + "event = [" + event + "]");
@@ -629,20 +645,6 @@ public class QueueFragment extends RxFragmentTemplate<List<FeedItem>> {
         @Override
         public LongList getQueueIds() {
             return queue != null ? LongList.of(FeedItemUtil.getIds(queue)) : new LongList(0);
-        }
-    };
-
-    private final EventDistributor.EventListener contentUpdate = new EventDistributor.EventListener() {
-        @Override
-        public void update(EventDistributor eventDistributor, Integer arg) {
-            if ((arg & EVENTS) != 0) {
-                Log.d(TAG, "arg: " + arg);
-                restoreScrollQueuePosition = false;
-                loadMainRxContent();
-                if (isUpdatingFeeds != updateRefreshMenuItemChecker.isRefreshing()) {
-                    getActivity().supportInvalidateOptionsMenu();
-                }
-            }
         }
     };
 
