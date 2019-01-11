@@ -2,6 +2,7 @@ package de.danoeh.antennapod.fragment;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ListFragment;
 import android.util.Log;
 import android.view.Menu;
@@ -21,6 +22,8 @@ import de.danoeh.antennapod.core.storage.DBReader;
 import de.danoeh.antennapod.core.storage.DBWriter;
 import de.danoeh.antennapod.core.util.FeedItemUtil;
 import de.danoeh.antennapod.dialog.EpisodesApplyActionFragment;
+import de.danoeh.antennapod.uiutil.RxUiTemplate;
+import de.danoeh.antennapod.uiutil.RxWithContentUpdateUiTemplate;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
@@ -33,55 +36,64 @@ public class CompletedDownloadsFragment extends ListFragment {
 
     private static final String TAG = CompletedDownloadsFragment.class.getSimpleName();
 
-    private static final int EVENTS = EventDistributor.DOWNLOAD_HANDLED |
-            EventDistributor.DOWNLOADLOG_UPDATE |
-            EventDistributor.UNREAD_ITEMS_UPDATE;
-
     private List<FeedItem> items;
     private DownloadedEpisodesListAdapter listAdapter;
 
     private boolean viewCreated = false;
 
-    private Disposable disposable;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
-        loadItems();
+    }
+
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        rxUiTemplate.onResume();
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-        EventDistributor.getInstance().register(contentUpdate);
+    public void onPause() {
+        super.onPause();
+        rxUiTemplate.onPause();
     }
 
-    @Override
-    public void onStop() {
-        super.onStop();
-        EventDistributor.getInstance().unregister(contentUpdate);
-        if (disposable != null) {
-            disposable.dispose();
+    private final RxUiTemplate rxUiTemplate = new RxWithContentUpdateUiTemplate() {
+        private static final int EVENTS = EventDistributor.DOWNLOAD_HANDLED |
+                EventDistributor.DOWNLOADLOG_UPDATE |
+                EventDistributor.UNREAD_ITEMS_UPDATE;
+
+        @NonNull
+        @Override
+        protected Disposable doLoadMainContent() {
+            if (items == null && viewCreated) {
+                setListShown(false);
+            }
+            return Observable.fromCallable(DBReader::getDownloadedItems)
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(result -> {
+                        items = result;
+                        if (viewCreated && getActivity() != null) {
+                            onFragmentLoaded();
+                        }
+                    }, error ->  Log.e(TAG, Log.getStackTraceString(error)));
         }
-    }
 
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        if (disposable != null) {
-            disposable.dispose();
+        @Override
+        protected int getInterestedEvents() {
+            return EVENTS;
         }
-    }
+    };
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         listAdapter = null;
         viewCreated = false;
-        if (disposable != null) {
-            disposable.dispose();
-        }
     }
 
     @Override
@@ -171,32 +183,5 @@ public class CompletedDownloadsFragment extends ListFragment {
             DBWriter.deleteFeedMediaOfItem(getActivity(), item.getMedia().getId());
         }
     };
-
-    private final EventDistributor.EventListener contentUpdate = new EventDistributor.EventListener() {
-        @Override
-        public void update(EventDistributor eventDistributor, Integer arg) {
-            if ((arg & EVENTS) != 0) {
-                loadItems();
-            }
-        }
-    };
-
-    private void loadItems() {
-        if (disposable != null) {
-            disposable.dispose();
-        }
-        if (items == null && viewCreated) {
-            setListShown(false);
-        }
-        disposable = Observable.fromCallable(DBReader::getDownloadedItems)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(result -> {
-                    items = result;
-                    if (viewCreated && getActivity() != null) {
-                        onFragmentLoaded();
-                    }
-                }, error ->  Log.e(TAG, Log.getStackTraceString(error)));
-    }
 
 }
