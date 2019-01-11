@@ -14,7 +14,7 @@ public abstract class RxWithContentUpdateUiTemplate extends RxUiTemplate {
             if ((arg & getInterestedEvents()) != 0) {
                 Log.d(TAG, "arg: " + arg);
                 doContentUpdatePrePx();
-                loadMainRxContent();
+                loadMainContent();
                 doContentUpdatePostPx();
             }
         }

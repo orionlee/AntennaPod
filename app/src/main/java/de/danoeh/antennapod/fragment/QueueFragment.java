@@ -128,7 +128,7 @@ public class QueueFragment extends Fragment implements EventBusUiTemplateTrait {
         }
 
         @Override
-        protected void doLoadMainPreRx() {
+        protected void doLoadMainContentPreRx() {
             if (queue == null) {
                 recyclerView.setVisibility(View.GONE);
                 txtvEmpty.setVisibility(View.GONE);
@@ -138,7 +138,7 @@ public class QueueFragment extends Fragment implements EventBusUiTemplateTrait {
 
         @NonNull
         @Override
-        protected Disposable doLoadMainRxContent() {
+        protected Disposable doLoadMainContent() {
             // OPEN: Probably should replace Observable.fromCallable with Single.fromCallable
             return withDefaultSchedulers(Observable.fromCallable(DBReader::getQueue))
                             .subscribe(items -> {

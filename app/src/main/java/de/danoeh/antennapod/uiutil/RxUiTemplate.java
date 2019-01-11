@@ -31,7 +31,7 @@ public abstract class RxUiTemplate {
      */
     public final void onResume() {
         doOnResumePreRx();
-        loadMainRxContent();
+        loadMainContent();
         doOnResumePostRx();
     }
 
@@ -39,12 +39,12 @@ public abstract class RxUiTemplate {
      * Load the main content with RxJava, primarily during {@link #onResume()}.
      * Owning class may call it at some other points as needed as well.
      *
-     * @see #doLoadMainPreRx() subclass-specific actual RxJava call
+     * @see #doLoadMainContentPreRx() subclass-specific actual RxJava call
      */
-    public final void loadMainRxContent() {
+    public final void loadMainContent() {
         disposeIfAny(); // to be on the safe side
-        doLoadMainPreRx();
-        disposable = doLoadMainRxContent();
+        doLoadMainContentPreRx();
+        disposable = doLoadMainContent();
     }
 
     /**
@@ -66,10 +66,15 @@ public abstract class RxUiTemplate {
     /**
      * Optional hook
      */
-    protected void doLoadMainPreRx() {}
+    protected void doLoadMainContentPreRx() {}
 
+    /**
+     * Perform actual RxJava calls to load the content.
+     *
+     * @return the {@link Disposable} that RxJava supplies after the content is loaded
+     */
     @NonNull
-    protected abstract Disposable doLoadMainRxContent();
+    protected abstract Disposable doLoadMainContent();
 
     /**
      * Optional hook
@@ -91,7 +96,7 @@ public abstract class RxUiTemplate {
     }
 
     //
-    // Helpers
+    // Helpers for implementation classes
     //
 
     @NonNull

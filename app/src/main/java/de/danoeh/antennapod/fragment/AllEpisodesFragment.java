@@ -121,7 +121,7 @@ public class AllEpisodesFragment extends Fragment implements EventBusUiTemplateT
                 EventDistributor.PLAYER_STATUS_UPDATE;
 
         @Override
-        protected void doLoadMainPreRx() {
+        protected void doLoadMainContentPreRx() {
             if (viewsCreated && !itemsLoaded) {
                 recyclerView.setVisibility(View.GONE);
                 progLoading.setVisibility(View.VISIBLE);
@@ -130,7 +130,7 @@ public class AllEpisodesFragment extends Fragment implements EventBusUiTemplateT
 
         @NonNull
         @Override
-        protected Disposable doLoadMainRxContent() {
+        protected Disposable doLoadMainContent() {
             // OPEN: Probably should replace Observable.fromCallable with Single.fromCallable
             return withDefaultSchedulers(Observable.fromCallable(AllEpisodesFragment.this.getMainRxSupplierCallable()))
                     .subscribe(data -> {
@@ -176,7 +176,14 @@ public class AllEpisodesFragment extends Fragment implements EventBusUiTemplateT
         // END For content update events handling
     };
 
-    // Allow subclass to override the source
+    /**
+     * Subclass should override the method to supply define their own sources
+     *
+     * @return the {@link Callable} that will return the episodes for the fragment.
+     *
+     * @see #rxUiTemplate it uses the supplied callable to load the data with RxJava
+     *
+     */
     Callable<? extends List<FeedItem>> getMainRxSupplierCallable() {
         return () -> DBReader.getRecentlyPublishedEpisodes(RECENT_EPISODES_LIMIT);
     }
@@ -508,7 +515,7 @@ public class AllEpisodesFragment extends Fragment implements EventBusUiTemplateT
     // retain the method for compatibility with API needed by its subclasses
     // The name is more readable as well in subclass' context.
     void loadItems() {
-        rxUiTemplate.loadMainRxContent();
+        rxUiTemplate.loadMainContent();
     }
 
     void markItemAsSeenWithUndo(FeedItem item) {
