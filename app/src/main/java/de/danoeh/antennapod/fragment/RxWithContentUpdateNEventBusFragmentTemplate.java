@@ -5,9 +5,9 @@ import android.util.Log;
 import de.danoeh.antennapod.core.feed.EventDistributor;
 import de.greenrobot.event.EventBus;
 
-public abstract class RxWithContentUpdateFragmentTemplate<T> extends RxFragmentTemplate<T> {
+public abstract class RxWithContentUpdateNEventBusFragmentTemplate<T> extends RxFragmentTemplate<T> {
 
-    private static final String TAG = "RxWContentUpdFrgmntTmpl";
+    private static final String TAG = "RxWCntUpdNEvBFrgmntTmpl";
 
     private final EventDistributor.EventListener contentUpdate = new EventDistributor.EventListener() {
         @Override

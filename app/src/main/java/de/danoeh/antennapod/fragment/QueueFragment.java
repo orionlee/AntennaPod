@@ -58,7 +58,7 @@ import io.reactivex.functions.Consumer;
 /**
  * Shows all items in the queue
  */
-public class QueueFragment extends RxWithContentUpdateFragmentTemplate<List<FeedItem>> {
+public class QueueFragment extends RxWithContentUpdateNEventBusFragmentTemplate<List<FeedItem>> {
 
     public static final String TAG = "QueueFragment";
 

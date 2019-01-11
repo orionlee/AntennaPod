@@ -55,7 +55,7 @@ import io.reactivex.functions.Consumer;
 /**
  * Shows unread or recently published episodes
  */
-public class AllEpisodesFragment extends RxWithContentUpdateFragmentTemplate<List<FeedItem>> {
+public class AllEpisodesFragment extends RxWithContentUpdateNEventBusFragmentTemplate<List<FeedItem>> {
 
     public static final String TAG = "AllEpisodesFragment";
 
