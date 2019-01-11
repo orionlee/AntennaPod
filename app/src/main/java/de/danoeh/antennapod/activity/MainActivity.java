@@ -10,6 +10,7 @@ import android.database.DataSetObserver;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -68,21 +69,19 @@ import de.danoeh.antennapod.fragment.PlaybackHistoryFragment;
 import de.danoeh.antennapod.fragment.QueueFragment;
 import de.danoeh.antennapod.fragment.SubscriptionFragment;
 import de.danoeh.antennapod.menuhandler.NavDrawerActivity;
-import de.greenrobot.event.EventBus;
+import de.danoeh.antennapod.uiutil.EventBusUiTemplateTrait;
+import de.danoeh.antennapod.uiutil.RxUiTemplate;
+import de.danoeh.antennapod.uiutil.RxWithContentUpdateUiTemplate;
 import io.reactivex.Observable;
-import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
-import io.reactivex.schedulers.Schedulers;
 
 /**
  * The activity that is shown when the user launches the app.
  */
-public class MainActivity extends CastEnabledActivity implements NavDrawerActivity {
+public class MainActivity extends CastEnabledActivity
+        implements NavDrawerActivity, EventBusUiTemplateTrait {
 
     private static final String TAG = "MainActivity";
-
-    private static final int EVENTS = EventDistributor.FEED_LIST_UPDATE
-            | EventDistributor.UNREAD_ITEMS_UPDATE;
 
     public static final String PREF_NAME = "MainActivityPrefs";
     public static final String PREF_IS_FIRST_LAUNCH = "prefMainActivityIsFirstLaunch";
@@ -121,8 +120,6 @@ public class MainActivity extends CastEnabledActivity implements NavDrawerActivi
     private CharSequence currentTitle;
 
     private ProgressDialog pd;
-
-    private Disposable disposable;
 
     private long lastBackButtonPressTime = 0;
 
@@ -460,18 +457,17 @@ public class MainActivity extends CastEnabledActivity implements NavDrawerActivi
     @Override
     public void onStart() {
         super.onStart();
-        EventDistributor.getInstance().register(contentUpdate);
-        EventBus.getDefault().register(this);
         RatingDialog.init(this);
     }
 
     @Override
-    protected void onPause() {
+    public void onPause() {
         super.onPause();
+        EventBusUiTemplateTrait.super.onPause();
     }
 
     @Override
-    protected void onResume() {
+    public void onResume() {
         super.onResume();
         StorageUtils.checkStorageAvailability(this);
         AutoUpdateManager.checkShouldRefreshFeeds(getApplicationContext());
@@ -482,23 +478,45 @@ public class MainActivity extends CastEnabledActivity implements NavDrawerActivi
                         (intent.hasExtra(EXTRA_NAV_INDEX) || intent.hasExtra(EXTRA_FRAGMENT_TAG)))) {
             handleNavIntent();
         }
-        loadData();
+        rxUiTemplate.onResume();
         RatingDialog.check();
+        EventBusUiTemplateTrait.super.onResume();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        EventDistributor.getInstance().unregister(contentUpdate);
-        EventBus.getDefault().unregister(this);
-        if (disposable != null) {
-            disposable.dispose();
-        }
         if(pd != null) {
             pd.dismiss();
         }
     }
 
+    private final RxUiTemplate rxUiTemplate = new RxWithContentUpdateUiTemplate() {
+
+        private static final int EVENTS = EventDistributor.FEED_LIST_UPDATE
+                | EventDistributor.UNREAD_ITEMS_UPDATE;
+
+        @NonNull
+        @Override
+        protected Disposable doLoadMainContent() {
+            return withDefaultSchedulers(Observable.fromCallable(DBReader::getNavDrawerData))
+                    .subscribe(result -> {
+                        boolean handleIntent = (navDrawerData == null);
+
+                        navDrawerData = result;
+                        navAdapter.notifyDataSetChanged();
+
+                        if (handleIntent) {
+                            handleNavIntent();
+                        }
+                    }, defaultRxErrorConsumer);
+        }
+
+        @Override
+        protected int getInterestedEvents() {
+            return EVENTS;
+        }
+    };
 
     @TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH)
     @Override
@@ -749,22 +767,6 @@ public class MainActivity extends CastEnabledActivity implements NavDrawerActivi
 
     };
 
-    private void loadData() {
-        disposable = Observable.fromCallable(DBReader::getNavDrawerData)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(result -> {
-                    boolean handleIntent = (navDrawerData == null);
-
-                    navDrawerData = result;
-                    navAdapter.notifyDataSetChanged();
-
-                    if (handleIntent) {
-                        handleNavIntent();
-                    }
-                }, error -> Log.e(TAG, Log.getStackTraceString(error)));
-    }
-
     public void onEvent(QueueEvent event) {
         Log.d(TAG, "onEvent(" + event + ")");
         // we are only interested in the number of queue items, not download status or position
@@ -773,7 +775,7 @@ public class MainActivity extends CastEnabledActivity implements NavDrawerActivi
                 event.action == QueueEvent.Action.MOVED) {
             return;
         }
-        loadData();
+        rxUiTemplate.loadMainContent();
     }
 
     public void onEventMainThread(ServiceEvent event) {
@@ -812,17 +814,6 @@ public class MainActivity extends CastEnabledActivity implements NavDrawerActivi
         }
         snackbar.show();
     }
-
-    private final EventDistributor.EventListener contentUpdate = new EventDistributor.EventListener() {
-
-        @Override
-        public void update(EventDistributor eventDistributor, Integer arg) {
-            if ((EVENTS & arg) != 0) {
-                Log.d(TAG, "Received contentUpdate Intent.");
-                loadData();
-            }
-        }
-    };
 
     private void handleNavIntent() {
         Log.d(TAG, "handleNavIntent()");
