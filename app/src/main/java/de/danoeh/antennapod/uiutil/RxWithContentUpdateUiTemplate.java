@@ -4,6 +4,10 @@ import android.util.Log;
 
 import de.danoeh.antennapod.core.feed.EventDistributor;
 
+/**
+ * An extension of {@link RxUiTemplate} that supports the pattern of updating the UI with a
+ * {@link EventDistributor.EventListener}. The actual update is done by {@link RxUiTemplate#loadMainContent()}.
+ */
 public abstract class RxWithContentUpdateUiTemplate extends RxUiTemplate {
 
     private static final String TAG = "RxWContentUpdateUiTmplt";
@@ -31,7 +35,7 @@ public abstract class RxWithContentUpdateUiTemplate extends RxUiTemplate {
     }
 
     /**
-     *
+     * @return The (bit-masked) list of events the implementation is interested in.
      * @see EventDistributor the constants for the events supported
      */
     protected abstract int getInterestedEvents();
