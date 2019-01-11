@@ -1,6 +1,7 @@
 package de.danoeh.antennapod.fragment;
 
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.Log;
@@ -9,6 +10,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import java.util.List;
+import java.util.concurrent.Callable;
 
 import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.adapter.AllEpisodesRecycleAdapter;
@@ -105,9 +107,10 @@ public class NewEpisodesFragment extends AllEpisodesFragment {
         return root;
     }
 
+    @NonNull
     @Override
-    protected List<FeedItem> loadData() {
-        return DBReader.getNewItemsList();
+    protected Callable<? extends List<FeedItem>> getMainRxSupplierCallable() {
+        return DBReader::getNewItemsList;
     }
 
 }

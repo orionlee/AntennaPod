@@ -1,6 +1,7 @@
 package de.danoeh.antennapod.fragment;
 
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
@@ -10,6 +11,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import java.util.List;
+import java.util.concurrent.Callable;
 
 import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.adapter.AllEpisodesRecycleAdapter;
@@ -62,9 +64,6 @@ public class FavoriteEpisodesFragment extends AllEpisodesFragment {
                 AllEpisodesRecycleAdapter.Holder holder = (AllEpisodesRecycleAdapter.Holder)viewHolder;
                 Log.d(TAG, "remove(" + holder.getItemId() + ")");
 
-                if (disposable != null) {
-                    disposable.dispose();
-                }
                 FeedItem item = holder.getFeedItem();
                 if (item != null) {
                     DBWriter.removeFavoriteItem(item);
@@ -82,8 +81,10 @@ public class FavoriteEpisodesFragment extends AllEpisodesFragment {
         return root;
     }
 
+    @NonNull
     @Override
-    protected List<FeedItem> loadData() {
-        return DBReader.getFavoriteItemsList();
+    protected Callable<? extends List<FeedItem>> getMainRxSupplierCallable() {
+        return DBReader::getFavoriteItemsList;
     }
+
 }

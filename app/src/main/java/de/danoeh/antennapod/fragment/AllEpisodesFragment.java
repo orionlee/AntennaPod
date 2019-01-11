@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
-import android.support.v4.app.Fragment;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -26,6 +25,7 @@ import android.widget.Toast;
 import com.yqritc.recyclerviewflexibledivider.HorizontalDividerItemDecoration;
 
 import java.util.List;
+import java.util.concurrent.Callable;
 
 import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.activity.MainActivity;
@@ -50,16 +50,12 @@ import de.danoeh.antennapod.core.util.FeedItemUtil;
 import de.danoeh.antennapod.core.util.LongList;
 import de.danoeh.antennapod.menuhandler.FeedItemMenuHandler;
 import de.danoeh.antennapod.menuhandler.MenuItemUtils;
-import de.greenrobot.event.EventBus;
-import io.reactivex.Observable;
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.schedulers.Schedulers;
+import io.reactivex.functions.Consumer;
 
 /**
  * Shows unread or recently published episodes
  */
-public class AllEpisodesFragment extends Fragment {
+public class AllEpisodesFragment extends RxWithContentUpdateFragmentTemplate<List<FeedItem>> {
 
     public static final String TAG = "AllEpisodesFragment";
 
@@ -85,7 +81,6 @@ public class AllEpisodesFragment extends Fragment {
     private boolean isUpdatingFeeds;
     boolean isMenuInvalidationAllowed = false;
 
-    Disposable disposable;
     private LinearLayoutManager layoutManager;
 
     boolean showOnlyNewEpisodes() { return false; }
@@ -100,35 +95,80 @@ public class AllEpisodesFragment extends Fragment {
     @Override
     public void onStart() {
         super.onStart();
-        EventDistributor.getInstance().register(contentUpdate);
         if (viewsCreated && itemsLoaded) {
             onFragmentLoaded();
         }
     }
 
+    // BEGIN For RxJava content loading
+
+    /**
+     * Subclass should override this method to provide different
+     * {@link FeedItem} list to the UI.
+     */
+    @NonNull
     @Override
-    public void onResume() {
-        super.onResume();
-        EventBus.getDefault().registerSticky(this);
-        loadItems();
+    protected Callable<? extends List<FeedItem>> getMainRxSupplierCallable() {
+        return () -> DBReader.getRecentlyPublishedEpisodes(RECENT_EPISODES_LIMIT);
+    }
+
+    @Override
+    protected void doLoadMainPreRx() {
+        if (viewsCreated && !itemsLoaded) {
+            recyclerView.setVisibility(View.GONE);
+            progLoading.setVisibility(View.VISIBLE);
+        }
+    }
+
+    @NonNull
+    @Override
+    protected Consumer<? super List<FeedItem>> getMainRxResultConsumer() {
+        return data -> {
+            recyclerView.setVisibility(View.VISIBLE);
+            progLoading.setVisibility(View.GONE);
+            episodes = data;
+            itemsLoaded = true;
+            if (viewsCreated) {
+                onFragmentLoaded();
+            }
+        };
+    }
+
+    @Override
+    protected void doOnResumePostRx() {
+        super.doOnResumePostRx();
         registerForContextMenu(recyclerView);
     }
 
     @Override
-    public void onPause() {
-        super.onPause();
-        EventBus.getDefault().unregister(this);
+    protected void doOnPause() {
+        super.doOnPause();
         saveScrollPosition();
         unregisterForContextMenu(recyclerView);
     }
 
+    // END For RxJava content loading
+
+    // BEGIN  For content update events handling
+
+    @Override
+    protected int getInterestedEvents() {
+        return EVENTS;
+    }
+
+    @Override
+    protected void doContentUpdatePostPx() {
+        super.doContentUpdatePostPx();
+        if (isUpdatingFeeds != updateRefreshMenuItemChecker.isRefreshing()) {
+            getActivity().supportInvalidateOptionsMenu();
+        }
+    }
+
+    // END For content update events handling
+
     @Override
     public void onStop() {
         super.onStop();
-        EventDistributor.getInstance().unregister(contentUpdate);
-        if (disposable != null) {
-            disposable.dispose();
-        }
     }
 
     @Override
@@ -447,46 +487,13 @@ public class AllEpisodesFragment extends Fragment {
         }
     }
 
-    private final EventDistributor.EventListener contentUpdate = new EventDistributor.EventListener() {
-        @Override
-        public void update(EventDistributor eventDistributor, Integer arg) {
-            if ((arg & EVENTS) != 0) {
-                loadItems();
-                if (isUpdatingFeeds != updateRefreshMenuItemChecker.isRefreshing()) {
-                    getActivity().supportInvalidateOptionsMenu();
-                }
-            }
-        }
-    };
-
     private void updateShowOnlyEpisodesListViewState() {
     }
 
+    // retain the method for compatibility with API needed by its subclasses
+    // The name is more readable as well in subclass' context.
     void loadItems() {
-        if (disposable != null) {
-            disposable.dispose();
-        }
-        if (viewsCreated && !itemsLoaded) {
-            recyclerView.setVisibility(View.GONE);
-            progLoading.setVisibility(View.VISIBLE);
-        }
-        disposable = Observable.fromCallable(this::loadData)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(data -> {
-                    recyclerView.setVisibility(View.VISIBLE);
-                    progLoading.setVisibility(View.GONE);
-                    episodes = data;
-                    itemsLoaded = true;
-                    if (viewsCreated) {
-                        onFragmentLoaded();
-                    }
-                }, error -> Log.e(TAG, Log.getStackTraceString(error)));
-    }
-
-    @NonNull
-    List<FeedItem> loadData() {
-        return DBReader.getRecentlyPublishedEpisodes(RECENT_EPISODES_LIMIT);
+        loadMainRxContent();
     }
 
     void markItemAsSeenWithUndo(FeedItem item) {
@@ -495,9 +502,6 @@ public class AllEpisodesFragment extends Fragment {
         }
 
         Log.d(TAG, "markItemAsSeenWithUndo(" + item.getId() + ")");
-        if (disposable != null) {
-            disposable.dispose();
-        }
         // we're marking it as unplayed since the user didn't actually play it
         // but they don't want it considered 'NEW' anymore
         DBWriter.markItemPlayed(FeedItem.UNPLAYED, item.getId());
