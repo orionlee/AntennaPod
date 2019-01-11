@@ -1,4 +1,4 @@
-package de.danoeh.antennapod.fragment;
+package de.danoeh.antennapod.uiutil;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -20,8 +20,8 @@ import io.reactivex.schedulers.Schedulers;
  * The template manages the life cycle of the RxJava artifact, and provides
  * default error handling.
  */
-public abstract class RxFragmentTemplate<T> {
-    private static final String TAG = "RxFragmentTemplate";
+public abstract class RxUiTemplate<T> {
+    private static final String TAG = "RxUiTemplate";
 
     private final Consumer<Throwable> defaultRxErrorConsumer = error -> Log.e(TAG, Log.getStackTraceString(error));
 
@@ -39,12 +39,12 @@ public abstract class RxFragmentTemplate<T> {
 
     /**
      * Load the main content with RxJava, primarily during {@link #onResume()}.
-     * Subclass may call it at some other points as needed as well.
+     * Owning class may call it at some other points as needed as well.
      *
      * @see #getMainRxSupplierCallable() supplies the content
      * @see #getMainRxResultConsumer() process the content
      */
-    protected final void loadMainRxContent() {
+    public final void loadMainRxContent() {
         disposeIfAny(); // to be on the safe side
         doLoadMainPreRx();
         // OPEN: Probably should replace Observable.fromCallable with Single.fromCallable

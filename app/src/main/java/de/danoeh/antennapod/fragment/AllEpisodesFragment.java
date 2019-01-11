@@ -51,6 +51,8 @@ import de.danoeh.antennapod.core.util.FeedItemUtil;
 import de.danoeh.antennapod.core.util.LongList;
 import de.danoeh.antennapod.menuhandler.FeedItemMenuHandler;
 import de.danoeh.antennapod.menuhandler.MenuItemUtils;
+import de.danoeh.antennapod.uiutil.EventBusUiTemplateTrait;
+import de.danoeh.antennapod.uiutil.RxWithContentUpdateUiTemplate;
 import io.reactivex.functions.Consumer;
 
 /**
@@ -111,7 +113,7 @@ public class AllEpisodesFragment extends Fragment implements EventBusUiTemplateT
         EventBusUiTemplateTrait.super.onPause();
     }
 
-    private final RxWithContentUpdateNEventBusFragmentTemplate rxUiTemplate = new RxWithContentUpdateNEventBusFragmentTemplate() {
+    private final RxWithContentUpdateUiTemplate rxUiTemplate = new RxWithContentUpdateUiTemplate() {
 
         private static final int EVENTS = EventDistributor.FEED_LIST_UPDATE |
                 EventDistributor.UNREAD_ITEMS_UPDATE |

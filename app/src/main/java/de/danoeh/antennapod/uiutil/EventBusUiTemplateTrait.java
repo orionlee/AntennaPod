@@ -1,4 +1,4 @@
-package de.danoeh.antennapod.fragment;
+package de.danoeh.antennapod.uiutil;
 
 import de.greenrobot.event.EventBus;
 

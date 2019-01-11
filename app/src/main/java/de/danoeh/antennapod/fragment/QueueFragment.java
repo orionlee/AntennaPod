@@ -54,6 +54,8 @@ import de.danoeh.antennapod.core.util.LongList;
 import de.danoeh.antennapod.core.util.QueueSorter;
 import de.danoeh.antennapod.menuhandler.FeedItemMenuHandler;
 import de.danoeh.antennapod.menuhandler.MenuItemUtils;
+import de.danoeh.antennapod.uiutil.EventBusUiTemplateTrait;
+import de.danoeh.antennapod.uiutil.RxWithContentUpdateUiTemplate;
 import io.reactivex.functions.Consumer;
 
 /**
@@ -112,7 +114,7 @@ public class QueueFragment extends Fragment implements EventBusUiTemplateTrait {
         EventBusUiTemplateTrait.super.onPause();
     }
 
-    private final RxWithContentUpdateNEventBusFragmentTemplate rxUiTemplate = new RxWithContentUpdateNEventBusFragmentTemplate() {
+    private final RxWithContentUpdateUiTemplate rxUiTemplate = new RxWithContentUpdateUiTemplate() {
 
         private static final int EVENTS = EventDistributor.DOWNLOAD_HANDLED |
                 EventDistributor.UNREAD_ITEMS_UPDATE | // sent when playback position is reset

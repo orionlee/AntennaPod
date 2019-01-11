@@ -1,12 +1,12 @@
-package de.danoeh.antennapod.fragment;
+package de.danoeh.antennapod.uiutil;
 
 import android.util.Log;
 
 import de.danoeh.antennapod.core.feed.EventDistributor;
 
-public abstract class RxWithContentUpdateNEventBusFragmentTemplate<T> extends RxFragmentTemplate<T> {
+public abstract class RxWithContentUpdateUiTemplate<T> extends RxUiTemplate<T> {
 
-    private static final String TAG = "RxWCntUpdNEvBFrgmntTmpl";
+    private static final String TAG = "RxWContentUpdateUiTmplt";
 
     private final EventDistributor.EventListener contentUpdate = new EventDistributor.EventListener() {
         @Override
