@@ -53,7 +53,8 @@ import de.danoeh.antennapod.menuhandler.FeedItemMenuHandler;
 import de.danoeh.antennapod.menuhandler.MenuItemUtils;
 import de.danoeh.antennapod.uiutil.EventBusUiTemplateTrait;
 import de.danoeh.antennapod.uiutil.RxWithContentUpdateUiTemplate;
-import io.reactivex.functions.Consumer;
+import io.reactivex.Observable;
+import io.reactivex.disposables.Disposable;
 
 /**
  * Shows unread or recently published episodes
@@ -119,17 +120,6 @@ public class AllEpisodesFragment extends Fragment implements EventBusUiTemplateT
                 EventDistributor.UNREAD_ITEMS_UPDATE |
                 EventDistributor.PLAYER_STATUS_UPDATE;
 
-
-        /**
-         * Subclass should override this method to provide different
-         * {@link FeedItem} list to the UI.
-         */
-        @NonNull
-        @Override
-        protected Callable<? extends List<FeedItem>> getMainRxSupplierCallable() {
-            return AllEpisodesFragment.this.getMainRxSupplierCallable();
-        }
-
         @Override
         protected void doLoadMainPreRx() {
             if (viewsCreated && !itemsLoaded) {
@@ -140,16 +130,19 @@ public class AllEpisodesFragment extends Fragment implements EventBusUiTemplateT
 
         @NonNull
         @Override
-        protected Consumer<? super List<FeedItem>> getMainRxResultConsumer() {
-            return data -> {
-                recyclerView.setVisibility(View.VISIBLE);
-                progLoading.setVisibility(View.GONE);
-                episodes = data;
-                itemsLoaded = true;
-                if (viewsCreated) {
-                    onFragmentLoaded();
-                }
-            };
+        protected Disposable doLoadMainRxContent() {
+            // OPEN: Probably should replace Observable.fromCallable with Single.fromCallable
+            return withDefaultSchedulers(Observable.fromCallable(AllEpisodesFragment.this.getMainRxSupplierCallable()))
+                    .subscribe(data -> {
+                                recyclerView.setVisibility(View.VISIBLE);
+                                progLoading.setVisibility(View.GONE);
+                                episodes = data;
+                                itemsLoaded = true;
+                                if (viewsCreated) {
+                                    onFragmentLoaded();
+                                }
+                            },
+                            defaultRxErrorConsumer);
         }
 
         @Override

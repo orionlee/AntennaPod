@@ -4,7 +4,7 @@ import android.util.Log;
 
 import de.danoeh.antennapod.core.feed.EventDistributor;
 
-public abstract class RxWithContentUpdateUiTemplate<T> extends RxUiTemplate<T> {
+public abstract class RxWithContentUpdateUiTemplate extends RxUiTemplate {
 
     private static final String TAG = "RxWContentUpdateUiTmplt";
 

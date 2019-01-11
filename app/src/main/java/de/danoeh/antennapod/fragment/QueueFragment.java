@@ -26,7 +26,6 @@ import android.widget.TextView;
 import com.yqritc.recyclerviewflexibledivider.HorizontalDividerItemDecoration;
 
 import java.util.List;
-import java.util.concurrent.Callable;
 
 import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.activity.MainActivity;
@@ -56,7 +55,8 @@ import de.danoeh.antennapod.menuhandler.FeedItemMenuHandler;
 import de.danoeh.antennapod.menuhandler.MenuItemUtils;
 import de.danoeh.antennapod.uiutil.EventBusUiTemplateTrait;
 import de.danoeh.antennapod.uiutil.RxWithContentUpdateUiTemplate;
-import io.reactivex.functions.Consumer;
+import io.reactivex.Observable;
+import io.reactivex.disposables.Disposable;
 
 /**
  * Shows all items in the queue
@@ -120,12 +120,6 @@ public class QueueFragment extends Fragment implements EventBusUiTemplateTrait {
                 EventDistributor.UNREAD_ITEMS_UPDATE | // sent when playback position is reset
                 EventDistributor.PLAYER_STATUS_UPDATE;
 
-        @NonNull
-        @Override
-        protected Callable<? extends List<FeedItem>> getMainRxSupplierCallable() {
-            return DBReader::getQueue;
-        }
-
         private boolean restoreScrollQueuePosition = true;
 
         @Override
@@ -144,15 +138,18 @@ public class QueueFragment extends Fragment implements EventBusUiTemplateTrait {
 
         @NonNull
         @Override
-        protected Consumer<? super List<FeedItem>> getMainRxResultConsumer() {
-            return items -> {
-                progLoading.setVisibility(View.GONE);
-                queue = items;
-                onFragmentLoaded(restoreScrollQueuePosition);
-                if (recyclerAdapter != null) {
-                    recyclerAdapter.notifyDataSetChanged();
-                }
-            };
+        protected Disposable doLoadMainRxContent() {
+            // OPEN: Probably should replace Observable.fromCallable with Single.fromCallable
+            return withDefaultSchedulers(Observable.fromCallable(DBReader::getQueue))
+                            .subscribe(items -> {
+                                        progLoading.setVisibility(View.GONE);
+                                        queue = items;
+                                        onFragmentLoaded(restoreScrollQueuePosition);
+                                        if (recyclerAdapter != null) {
+                                            recyclerAdapter.notifyDataSetChanged();
+                                        }
+                                    },
+                                    defaultRxErrorConsumer);
         }
 
         @Override
