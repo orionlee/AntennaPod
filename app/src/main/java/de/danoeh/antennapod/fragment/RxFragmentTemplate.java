@@ -2,7 +2,6 @@ package de.danoeh.antennapod.fragment;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
 import android.util.Log;
 
 import java.util.concurrent.Callable;
@@ -21,7 +20,7 @@ import io.reactivex.schedulers.Schedulers;
  * The template manages the life cycle of the RxJava artifact, and provides
  * default error handling.
  */
-public abstract class RxFragmentTemplate<T> extends Fragment {
+public abstract class RxFragmentTemplate<T> {
     private static final String TAG = "RxFragmentTemplate";
 
     private final Consumer<Throwable> defaultRxErrorConsumer = error -> Log.e(TAG, Log.getStackTraceString(error));
@@ -29,9 +28,10 @@ public abstract class RxFragmentTemplate<T> extends Fragment {
     @Nullable
     private Disposable disposable;
 
-    @Override
+    /**
+     * Callers MUST invoke onResume in their on <code>onResume</code> implementation
+     */
     public final void onResume() {
-        super.onResume();
         doOnResumePreRx();
         loadMainRxContent();
         doOnResumePostRx();
@@ -55,9 +55,10 @@ public abstract class RxFragmentTemplate<T> extends Fragment {
                         getMainRxErrorConsumer());
     }
 
-    @Override
+    /**
+     * Callers MUST invoke onPause in their on <code>onPause</code> implementation
+     */
     public final void onPause() {
-        super.onPause();
         try {
             doOnPause();
         } finally {

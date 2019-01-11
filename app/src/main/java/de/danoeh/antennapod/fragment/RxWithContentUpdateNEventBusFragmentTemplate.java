@@ -3,7 +3,6 @@ package de.danoeh.antennapod.fragment;
 import android.util.Log;
 
 import de.danoeh.antennapod.core.feed.EventDistributor;
-import de.greenrobot.event.EventBus;
 
 public abstract class RxWithContentUpdateNEventBusFragmentTemplate<T> extends RxFragmentTemplate<T> {
 
@@ -24,13 +23,11 @@ public abstract class RxWithContentUpdateNEventBusFragmentTemplate<T> extends Rx
     @Override
     protected void doOnResumePostRx() {
         EventDistributor.getInstance().register(contentUpdate);
-        EventBus.getDefault().registerSticky(this);
     }
 
     @Override
     protected void doOnPause() {
         EventDistributor.getInstance().unregister(contentUpdate);
-        EventBus.getDefault().unregister(this);
     }
 
     /**

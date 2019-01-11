@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.Fragment;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -58,13 +59,9 @@ import io.reactivex.functions.Consumer;
 /**
  * Shows all items in the queue
  */
-public class QueueFragment extends RxWithContentUpdateNEventBusFragmentTemplate<List<FeedItem>> {
+public class QueueFragment extends Fragment implements EventBusUiTemplateTrait {
 
     public static final String TAG = "QueueFragment";
-
-    private static final int EVENTS = EventDistributor.DOWNLOAD_HANDLED |
-            EventDistributor.UNREAD_ITEMS_UPDATE | // sent when playback position is reset
-            EventDistributor.PLAYER_STATUS_UPDATE;
 
     private TextView infoBar;
     private RecyclerView recyclerView;
@@ -100,71 +97,89 @@ public class QueueFragment extends RxWithContentUpdateNEventBusFragmentTemplate<
         }
     }
 
-    // BEGIN For RxJava content loading
-
-    @NonNull
-    @Override
-    protected Callable<? extends List<FeedItem>> getMainRxSupplierCallable() {
-        return DBReader::getQueue;
-    }
-
-    private boolean restoreScrollQueuePosition = true;
 
     @Override
-    protected void doOnResumePreRx() {
-        restoreScrollQueuePosition = true; // for main rx result consumer in onResume case
+    public void onResume() {
+        super.onResume();
+        rxUiTemplate.onResume();
+        EventBusUiTemplateTrait.super.onResume();
     }
 
     @Override
-    protected void doLoadMainPreRx() {
-        if (queue == null) {
-            recyclerView.setVisibility(View.GONE);
-            txtvEmpty.setVisibility(View.GONE);
-            progLoading.setVisibility(View.VISIBLE);
+    public void onPause() {
+        super.onPause();
+        rxUiTemplate.onPause();
+        EventBusUiTemplateTrait.super.onPause();
+    }
+
+    private final RxWithContentUpdateNEventBusFragmentTemplate rxUiTemplate = new RxWithContentUpdateNEventBusFragmentTemplate() {
+
+        private static final int EVENTS = EventDistributor.DOWNLOAD_HANDLED |
+                EventDistributor.UNREAD_ITEMS_UPDATE | // sent when playback position is reset
+                EventDistributor.PLAYER_STATUS_UPDATE;
+
+        @NonNull
+        @Override
+        protected Callable<? extends List<FeedItem>> getMainRxSupplierCallable() {
+            return DBReader::getQueue;
         }
-    }
 
-    @NonNull
-    @Override
-    protected Consumer<? super List<FeedItem>> getMainRxResultConsumer() {
-        return items -> {
-            progLoading.setVisibility(View.GONE);
-            queue = items;
-            onFragmentLoaded(restoreScrollQueuePosition);
-            if (recyclerAdapter != null) {
-                recyclerAdapter.notifyDataSetChanged();
+        private boolean restoreScrollQueuePosition = true;
+
+        @Override
+        protected void doOnResumePreRx() {
+            restoreScrollQueuePosition = true; // for main rx result consumer in onResume case
+        }
+
+        @Override
+        protected void doLoadMainPreRx() {
+            if (queue == null) {
+                recyclerView.setVisibility(View.GONE);
+                txtvEmpty.setVisibility(View.GONE);
+                progLoading.setVisibility(View.VISIBLE);
             }
-        };
-    }
-
-    @Override
-    protected void doOnPause() {
-        saveScrollPosition();
-        super.doOnPause();
-    }
-
-    // END For RxJava content loading
-
-    // BEGIN For content update events handling
-
-    @Override
-    protected int getInterestedEvents() {
-        return EVENTS;
-    }
-
-    @Override
-    protected void doContentUpdatePrePx() {
-        restoreScrollQueuePosition = false; // for main rx result consumer in content update event case
-    }
-
-    @Override
-    protected void doContentUpdatePostPx() {
-        if (isUpdatingFeeds != updateRefreshMenuItemChecker.isRefreshing()) {
-            getActivity().supportInvalidateOptionsMenu();
         }
-    }
 
-    // END For content update events handling
+        @NonNull
+        @Override
+        protected Consumer<? super List<FeedItem>> getMainRxResultConsumer() {
+            return items -> {
+                progLoading.setVisibility(View.GONE);
+                queue = items;
+                onFragmentLoaded(restoreScrollQueuePosition);
+                if (recyclerAdapter != null) {
+                    recyclerAdapter.notifyDataSetChanged();
+                }
+            };
+        }
+
+        @Override
+        protected void doOnPause() {
+            saveScrollPosition();
+            super.doOnPause();
+        }
+
+        // BEGIN For content update events handling
+
+        @Override
+        protected int getInterestedEvents() {
+            return EVENTS;
+        }
+
+        @Override
+        protected void doContentUpdatePrePx() {
+            restoreScrollQueuePosition = false; // for main rx result consumer in content update event case
+        }
+
+        @Override
+        protected void doContentUpdatePostPx() {
+            if (isUpdatingFeeds != updateRefreshMenuItemChecker.isRefreshing()) {
+                getActivity().supportInvalidateOptionsMenu();
+            }
+        }
+
+        // END For content update events handling
+    };
 
     public void onEventMainThread(QueueEvent event) {
         Log.d(TAG, "onEventMainThread() called with: " + "event = [" + event + "]");

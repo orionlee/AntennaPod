@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.Fragment;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -55,13 +56,9 @@ import io.reactivex.functions.Consumer;
 /**
  * Shows unread or recently published episodes
  */
-public class AllEpisodesFragment extends RxWithContentUpdateNEventBusFragmentTemplate<List<FeedItem>> {
+public class AllEpisodesFragment extends Fragment implements EventBusUiTemplateTrait {
 
     public static final String TAG = "AllEpisodesFragment";
-
-    private static final int EVENTS = EventDistributor.FEED_LIST_UPDATE |
-            EventDistributor.UNREAD_ITEMS_UPDATE |
-            EventDistributor.PLAYER_STATUS_UPDATE;
 
     private static final int RECENT_EPISODES_LIMIT = 150;
     private static final String DEFAULT_PREF_NAME = "PrefAllEpisodesFragment";
@@ -100,71 +97,94 @@ public class AllEpisodesFragment extends RxWithContentUpdateNEventBusFragmentTem
         }
     }
 
-    // BEGIN For RxJava content loading
-
-    /**
-     * Subclass should override this method to provide different
-     * {@link FeedItem} list to the UI.
-     */
-    @NonNull
     @Override
-    protected Callable<? extends List<FeedItem>> getMainRxSupplierCallable() {
+    public void onResume() {
+        super.onResume();
+        rxUiTemplate.onResume();
+        EventBusUiTemplateTrait.super.onResume();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        rxUiTemplate.onPause();
+        EventBusUiTemplateTrait.super.onPause();
+    }
+
+    private final RxWithContentUpdateNEventBusFragmentTemplate rxUiTemplate = new RxWithContentUpdateNEventBusFragmentTemplate() {
+
+        private static final int EVENTS = EventDistributor.FEED_LIST_UPDATE |
+                EventDistributor.UNREAD_ITEMS_UPDATE |
+                EventDistributor.PLAYER_STATUS_UPDATE;
+
+
+        /**
+         * Subclass should override this method to provide different
+         * {@link FeedItem} list to the UI.
+         */
+        @NonNull
+        @Override
+        protected Callable<? extends List<FeedItem>> getMainRxSupplierCallable() {
+            return AllEpisodesFragment.this.getMainRxSupplierCallable();
+        }
+
+        @Override
+        protected void doLoadMainPreRx() {
+            if (viewsCreated && !itemsLoaded) {
+                recyclerView.setVisibility(View.GONE);
+                progLoading.setVisibility(View.VISIBLE);
+            }
+        }
+
+        @NonNull
+        @Override
+        protected Consumer<? super List<FeedItem>> getMainRxResultConsumer() {
+            return data -> {
+                recyclerView.setVisibility(View.VISIBLE);
+                progLoading.setVisibility(View.GONE);
+                episodes = data;
+                itemsLoaded = true;
+                if (viewsCreated) {
+                    onFragmentLoaded();
+                }
+            };
+        }
+
+        @Override
+        protected void doOnResumePostRx() {
+            super.doOnResumePostRx();
+            registerForContextMenu(recyclerView);
+        }
+
+        @Override
+        protected void doOnPause() {
+            super.doOnPause();
+            saveScrollPosition();
+            unregisterForContextMenu(recyclerView);
+        }
+
+        // BEGIN  For content update events handling
+
+        @Override
+        protected int getInterestedEvents() {
+            return EVENTS;
+        }
+
+        @Override
+        protected void doContentUpdatePostPx() {
+            super.doContentUpdatePostPx();
+            if (isUpdatingFeeds != updateRefreshMenuItemChecker.isRefreshing()) {
+                getActivity().supportInvalidateOptionsMenu();
+            }
+        }
+
+        // END For content update events handling
+    };
+
+    // Allow subclass to override the source
+    Callable<? extends List<FeedItem>> getMainRxSupplierCallable() {
         return () -> DBReader.getRecentlyPublishedEpisodes(RECENT_EPISODES_LIMIT);
     }
-
-    @Override
-    protected void doLoadMainPreRx() {
-        if (viewsCreated && !itemsLoaded) {
-            recyclerView.setVisibility(View.GONE);
-            progLoading.setVisibility(View.VISIBLE);
-        }
-    }
-
-    @NonNull
-    @Override
-    protected Consumer<? super List<FeedItem>> getMainRxResultConsumer() {
-        return data -> {
-            recyclerView.setVisibility(View.VISIBLE);
-            progLoading.setVisibility(View.GONE);
-            episodes = data;
-            itemsLoaded = true;
-            if (viewsCreated) {
-                onFragmentLoaded();
-            }
-        };
-    }
-
-    @Override
-    protected void doOnResumePostRx() {
-        super.doOnResumePostRx();
-        registerForContextMenu(recyclerView);
-    }
-
-    @Override
-    protected void doOnPause() {
-        super.doOnPause();
-        saveScrollPosition();
-        unregisterForContextMenu(recyclerView);
-    }
-
-    // END For RxJava content loading
-
-    // BEGIN  For content update events handling
-
-    @Override
-    protected int getInterestedEvents() {
-        return EVENTS;
-    }
-
-    @Override
-    protected void doContentUpdatePostPx() {
-        super.doContentUpdatePostPx();
-        if (isUpdatingFeeds != updateRefreshMenuItemChecker.isRefreshing()) {
-            getActivity().supportInvalidateOptionsMenu();
-        }
-    }
-
-    // END For content update events handling
 
     @Override
     public void onStop() {
@@ -493,7 +513,7 @@ public class AllEpisodesFragment extends RxWithContentUpdateNEventBusFragmentTem
     // retain the method for compatibility with API needed by its subclasses
     // The name is more readable as well in subclass' context.
     void loadItems() {
-        loadMainRxContent();
+        rxUiTemplate.loadMainRxContent();
     }
 
     void markItemAsSeenWithUndo(FeedItem item) {
