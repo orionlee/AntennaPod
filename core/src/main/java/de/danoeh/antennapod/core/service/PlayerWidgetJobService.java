@@ -138,19 +138,24 @@ public class PlayerWidgetJobService extends SafeJobIntentService {
         manager.updateAppWidget(playerWidget, views);
     }
 
+    // The request code needs to be unique such that
+    // it does not collide with the similar MediaButtonReceiver PendingIntents
+    // in <code>PlaybackService.getPendingIntentForMediaAction()</code>
+    // Otherwise, the intents might be mistakenly treated as identical, rendering
+    // one of them be mistakenly treated as the other.
+    // @see PendingIntent equivalence in its documentation.
+    private static int REQUEST_CODE_4_WIDGET_BUTTON = 9876;
+
     /**
      * Creates an intent which fakes a mediabutton press
      */
     private PendingIntent createMediaButtonIntent() {
-        KeyEvent event = new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
-        Intent startingIntent = new Intent(getBaseContext(), MediaButtonReceiver.class);
-        startingIntent.setAction(MediaButtonReceiver.NOTIFY_BUTTON_RECEIVER);
-        startingIntent.putExtra(Intent.EXTRA_KEY_EVENT, event);
-
-        return PendingIntent.getBroadcast(this, 0, startingIntent, 0);
+        Intent startingIntent = MediaButtonReceiver.createIntentWithKeyCode(this,
+                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
+        return PendingIntent.getBroadcast(this, REQUEST_CODE_4_WIDGET_BUTTON, startingIntent, 0);
     }
 
-    private String getProgressString(int position, int duration) {
+    private String getProgressString(int position,  int duration) {
         if (position > 0 && duration > 0) {
             return Converter.getDurationStringLong(position) + " / "
                     + Converter.getDurationStringLong(duration);

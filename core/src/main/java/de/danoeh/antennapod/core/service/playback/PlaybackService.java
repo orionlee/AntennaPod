@@ -488,6 +488,19 @@ public class PlaybackService extends MediaBrowserServiceCompat {
         return Service.START_NOT_STICKY;
     }
 
+    // A public method exposed to allow MediaButtonReceiver
+    // to pass media button events to PlaybackService
+    //
+    // OPEN: an alternative is to have PlaybackService properly implement
+    // support lib's MediaBrowserServiceCompat so that support lib's
+    // MediaButtonReceiver can be used to handle media button events.
+    // (PlaybackService does extend MediaBrowserServiceCompat, but the current
+    // implementation somehow does not handle media button events properly.
+    // Details not yet known.)
+    public boolean handleKeyCode(int keycode) {
+       return handleKeycode(keycode, true);
+    }
+
     /**
      * Handles media button events
      * return: keycode was handled
@@ -1359,13 +1372,10 @@ public class PlaybackService extends MediaBrowserServiceCompat {
     }
 
     private PendingIntent getPendingIntentForMediaAction(int keycodeValue, int requestCode) {
-        Intent intent = new Intent(
-                PlaybackService.this, PlaybackService.class);
-        intent.putExtra(
-                MediaButtonReceiver.EXTRA_KEYCODE,
-                keycodeValue);
+        Intent intent = MediaButtonReceiver.createIntentWithKeyCode(this, keycodeValue);
         return PendingIntent
-                .getService(PlaybackService.this, requestCode,
+                .getBroadcast(PlaybackService.this,
+                        requestCode,
                         intent,
                         PendingIntent.FLAG_UPDATE_CURRENT);
     }
