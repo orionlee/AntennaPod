@@ -72,6 +72,7 @@ import de.danoeh.antennapod.core.util.QueueAccess;
 import de.danoeh.antennapod.core.util.gui.NotificationUtils;
 import de.danoeh.antennapod.core.util.playback.ExternalMedia;
 import de.danoeh.antennapod.core.util.playback.Playable;
+import de.danoeh.antennapod.core.util.playback.PlaybackServiceStarter;
 import de.greenrobot.event.EventBus;
 
 /**
@@ -600,8 +601,43 @@ public class PlaybackService extends MediaBrowserServiceCompat {
     private void startPlayingFromPreferences() {
         Playable playable = Playable.PlayableUtils.createInstanceFromPreferences(getApplicationContext());
         if (playable != null) {
-            mediaPlayer.playMediaObject(playable, false, true, true);
-            PlaybackService.this.updateMediaSessionMetadata(playable);
+            // Use PlaybackServiceStarter to play the playable, to ensure the service has started
+            //
+            // Otherwise, it caused error in an edge case
+            // when there is no service running, and media button event KEYCODE_MEDIA_PLAY_PAUSE
+            // is passed to the service (via MediaButtonReceiver)
+            //
+            // In that scenario, without explicitly starting the service,
+            // - 2 service instances will be used to handle the playback,
+            // - it caused error in PlaybackServiceTaskManager.startChapterLoader(), trying to load chapter in a thread pool,
+            // throwing an java.util.concurrent.RejectedExecutionException
+            // - the error caused the playback to fail, ultimately leading to ANR on Android 8+
+            //   (as the playback failed, the service is not brought to foreground)
+            //
+            // The details of the sequence is
+            // 1. MediaButtonReceiver -> bind to PlaybackService to pass the media button event
+            //    - the service is created, bound, and try to play (reaching here)
+            // 2. MediaButtonReceiver -> unbind, after the media button event has been passed along
+            //    - the service is unbound (and destroyed), the playing logic here
+            //      (mediaPlayer.playMediaObject()) will create a new service instance to continue
+            //    - as part of the preparation of playing, it then hits the exception in
+            //      PlaybackServiceTaskManager.startChapterLoader()
+            //    - the playback failed
+            //    - on Android 8+, it also leads to ANR (the service has not been brought
+            //      to foreground to the failed playback)
+            //
+            // Using PlaybackServiceStarter here, rather than mediaPlayer.playMediaObject(),
+            // prevents the failed playback and ANR,
+            // because upon MediaButtonReceiver unbinding from the service:
+            // - the service won't be destroyed (as it has been started here), guaranteeing that
+            // - the same service instance (and the same PlaybackServiceTaskManager instance)
+            //   is used throughout restarting the playback.
+            //
+            new PlaybackServiceStarter(getApplicationContext(), playable)
+                    .callEvenIfRunning(true)
+                    .shouldStream(!playable.localFileAvailable())
+                    .startWhenPrepared(true)
+                    .start();
         }
     }
 
