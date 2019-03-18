@@ -1,6 +1,9 @@
 package de.danoeh.antennapod.core.feed;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -56,6 +59,8 @@ public class FeedFilter {
 
         // check using lowercase so the users don't have to worry about case.
         String title = item.getTitle().toLowerCase();
+        // add item publication Date's day of week to the filter, so that users can filter, say, for Saturday episodes only
+        title = appendDayOfWeekToText(title, item.getPubDate());
 
         // if it's explicitly excluded, it shouldn't be autodownloaded
         // even if it has include terms
@@ -79,6 +84,15 @@ public class FeedFilter {
         }
 
         return false;
+    }
+
+    private static final DateFormat TO_DAY_OF_WEEK_FULL =  new SimpleDateFormat("EEEE");
+    private static String appendDayOfWeekToText(String text, Date dt) {
+        if (dt == null) {
+            return text;
+        }
+
+        return text + ' ' + TO_DAY_OF_WEEK_FULL.format(dt).toLowerCase();
     }
 
     public String getIncludeFilter() {
