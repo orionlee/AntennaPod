@@ -6,6 +6,7 @@ import android.support.v4.util.ArrayMap;
 import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -50,6 +51,7 @@ public class APDownloadAlgorithm implements AutomaticDownloadAlgorithm {
 
                 Log.d(TAG, "Performing auto-dl of undownloaded episodes");
 
+                List<FeedItem> nonAutoDlItems = new ArrayList<>();
                 List<FeedItem> candidates;
                 final List<FeedItem> queue = DBReader.getQueue();
                 final List<FeedItem> newItems = DBReader.getNewItemsList();
@@ -60,6 +62,9 @@ public class APDownloadAlgorithm implements AutomaticDownloadAlgorithm {
                     FeedFilter feedFilter = feedPrefs.getFilter();
                     if(!candidates.contains(newItem) && feedFilter.shouldAutoDownload(newItem)) {
                         candidates.add(newItem);
+                    }
+                    if (!feedPrefs.getAutoDownload()) { // not a else if, as the above candidates include all non-autodownloadble items
+                        nonAutoDlItems.add(newItem);
                     }
                 }
 
@@ -100,8 +105,58 @@ public class APDownloadAlgorithm implements AutomaticDownloadAlgorithm {
                     e.printStackTrace();
                 }
 
+                downloadSomeRandomNonAutoDownloadEpisodes(context, nonAutoDlItems, queue);
+
             }
         };
+    }
+
+    private static void downloadSomeRandomNonAutoDownloadEpisodes(Context context,
+                                                                  List<? extends FeedItem> nonAutoDlItems,
+                                                                  List<? extends FeedItem> queue) {
+        Log.d(TAG, "downloadSomeRandomNonAutoDownloadEpisodes() called: #nonAutoDlItems = [" + nonAutoDlItems.size() + "], #queue = [" + queue.size() + "]");
+        List<? extends FeedItem> itemsToDownload =
+                getSomeRandomNonAutoDownloadEpisodes(nonAutoDlItems, queue);
+        if (itemsToDownload.isEmpty()) {
+            return;
+        }
+
+        Log.d(TAG, "Random download - Enqueueing " + itemsToDownload.size()+ " items for download");
+
+        try {
+            DBTasks.downloadFeedItems(false, context,
+                    itemsToDownload.toArray(new FeedItem[itemsToDownload.size()]));
+        } catch (DownloadRequestException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static final int NUM_RECENT_ITEMS_TO_CONSIDER_IN_RANDOM_DL = 20;
+
+    @VisibleForTesting
+    static List<? extends FeedItem> getSomeRandomNonAutoDownloadEpisodes(List<? extends FeedItem> nonAutoDlItems,
+                                                                         List<? extends FeedItem> queue) {
+        if (containsNonAutoDownloadEpisodes(queue) || nonAutoDlItems.isEmpty()) {
+            return Collections.EMPTY_LIST;
+        }
+
+        int idxToGet = (int)Math.floor(Math.random() * NUM_RECENT_ITEMS_TO_CONSIDER_IN_RANDOM_DL);
+
+        FeedItem itemPicked = nonAutoDlItems.get(idxToGet);
+
+        List<FeedItem> result = new ArrayList<>(1);
+        result.add(itemPicked);
+
+        return result;
+    }
+
+    private static boolean containsNonAutoDownloadEpisodes(List<? extends FeedItem> queue) {
+        for(FeedItem item : queue) {
+            if (!item.getFeed().getPreferences().getAutoDownload()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static List<? extends FeedItem> cutCandidatesPerSpaceLeftAndPerFeedLimit(List<? extends FeedItem> candidates,
