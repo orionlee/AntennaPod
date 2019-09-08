@@ -1,6 +1,8 @@
 package de.danoeh.antennapod.core.storage;
 
 import android.content.Context;
+import android.support.annotation.VisibleForTesting;
+import android.support.v4.util.ArrayMap;
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -86,18 +88,82 @@ public class APDownloadAlgorithm implements AutomaticDownloadAlgorithm {
                     episodeSpaceLeft = episodeCacheSize - (downloadedEpisodes - deletedEpisodes);
                 }
 
-                FeedItem[] itemsToDownload = candidates.subList(0, episodeSpaceLeft)
-                        .toArray(new FeedItem[episodeSpaceLeft]);
+                List<? extends FeedItem> itemsToDownload =
+                        cutCandidatesPerSpaceLeftAndPerFeedLimit(candidates, queue, episodeSpaceLeft);
 
-                Log.d(TAG, "Enqueueing " + itemsToDownload.length + " items for download");
+                Log.d(TAG, "Enqueueing " + itemsToDownload.size()+ " items for download");
 
                 try {
-                    DBTasks.downloadFeedItems(false, context, itemsToDownload);
+                    DBTasks.downloadFeedItems(false, context,
+                            itemsToDownload.toArray(new FeedItem[itemsToDownload.size()]));
                 } catch (DownloadRequestException e) {
                     e.printStackTrace();
                 }
 
             }
         };
+    }
+
+    private static List<? extends FeedItem> cutCandidatesPerSpaceLeftAndPerFeedLimit(List<? extends FeedItem> candidates,
+                                                                                     List<? extends FeedItem> queue,
+                                                                                     int episodeSpaceLeft) {
+        final int MAX_NUM_EPISODES_PER_FEED_IN_QUEUE = 2; // LATER - make it configurable
+        return cutCandidatesPerSpaceLeftAndPerFeedLimit(candidates, queue, episodeSpaceLeft,
+                MAX_NUM_EPISODES_PER_FEED_IN_QUEUE);
+    }
+
+    /**
+     * Cut candidates per space left, but each podcast will have a max of
+     * <code>maxNumEpisodesPerFeed</code> in the resulting queue.
+     *
+     * Use case: avoid podcasts that frequently release new episodes dominating the queue.
+     */
+    @VisibleForTesting
+    static List<? extends FeedItem> cutCandidatesPerSpaceLeftAndPerFeedLimit(List<? extends FeedItem> candidates,
+                                                                             List<? extends FeedItem> queue,
+                                                                             int episodeSpaceLeft,
+                                                                             int maxNumEpisodesPerFeed) {
+        if (maxNumEpisodesPerFeed < 1) { // case unlimited
+            if (candidates.size() > episodeSpaceLeft) {
+                return candidates.subList(0, episodeSpaceLeft);
+            } else {
+                return candidates;
+            }
+        }
+
+        // case limit number of episodes per feed in queue
+
+        ArrayMap feedNumEpisodesMap = new ArrayMap<Long, Integer>();
+        for (FeedItem item : queue) {
+            increment(feedNumEpisodesMap, item.getFeedId());
+        }
+
+        List<FeedItem> result = new ArrayList<FeedItem>(episodeSpaceLeft);
+
+        Iterator<? extends FeedItem> it = candidates.iterator();
+        while(it.hasNext() && result.size() < episodeSpaceLeft) {
+            FeedItem item = it.next();
+            long feedId = item.getFeedId();
+            if (getOrZero(feedNumEpisodesMap, feedId) < maxNumEpisodesPerFeed) {
+                result.add(item);
+                increment(feedNumEpisodesMap, feedId);
+            } else {
+                Log.v(TAG, "item skipped because the feed has reached the per-feed limit. item: " +
+                        item.getTitle() + " , of feed: " + item.getFeed().getTitle());
+            }
+        }
+
+        return result;
+    }
+
+    private static void increment(ArrayMap<Long, Integer> map, long id) {
+        Integer curValIfAny = map.get(id);
+        int newVal = curValIfAny != null ? curValIfAny + 1 : 1;
+        map.put(id, newVal);
+    }
+
+    private static int getOrZero(ArrayMap<Long, Integer> map, long id) {
+        Integer curValIfAny = map.get(id);
+        return curValIfAny != null ? curValIfAny : 0;
     }
 }
