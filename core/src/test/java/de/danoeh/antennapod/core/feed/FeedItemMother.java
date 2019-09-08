@@ -4,10 +4,10 @@ import java.util.Date;
 
 import static de.danoeh.antennapod.core.feed.FeedMother.anyFeed;
 
-class FeedItemMother {
+public class FeedItemMother {
     private static final String IMAGE_URL = "http://example.com/image";
 
-    static FeedItem anyFeedItemWithImage() {
+    public static FeedItem anyFeedItemWithImage() {
         FeedItem item = new FeedItem(0, "Item", "Item", "url", new Date(), FeedItem.PLAYED, anyFeed());
         item.setImageUrl(IMAGE_URL);
         return item;
