@@ -132,11 +132,13 @@ public class APDownloadAlgorithm implements AutomaticDownloadAlgorithm {
     }
 
     private static final int NUM_RECENT_ITEMS_TO_CONSIDER_IN_RANDOM_DL = 20;
+    private static final int THRESHOLD_NUM_NON_AUTO_DL_ITEMS_IN_QUEUE_FOR_RANDOM  = 1;
 
     @VisibleForTesting
     static List<? extends FeedItem> getSomeRandomNonAutoDownloadEpisodes(List<? extends FeedItem> nonAutoDlItems,
                                                                          List<? extends FeedItem> queue) {
-        if (containsNonAutoDownloadEpisodes(queue) || nonAutoDlItems.isEmpty()) {
+        if (countNonAutoDownloadEpisodes(queue) >= THRESHOLD_NUM_NON_AUTO_DL_ITEMS_IN_QUEUE_FOR_RANDOM
+                || nonAutoDlItems.isEmpty()) {
             return Collections.EMPTY_LIST;
         }
 
@@ -150,13 +152,14 @@ public class APDownloadAlgorithm implements AutomaticDownloadAlgorithm {
         return result;
     }
 
-    private static boolean containsNonAutoDownloadEpisodes(List<? extends FeedItem> queue) {
+    private static int countNonAutoDownloadEpisodes(List<? extends FeedItem> queue) {
+        int result = 0;
         for(FeedItem item : queue) {
             if (!item.getFeed().getPreferences().getAutoDownload()) {
-                return true;
+                result++;
             }
         }
-        return false;
+        return result;
     }
 
     private static List<? extends FeedItem> cutCandidatesPerSpaceLeftAndPerFeedLimit(List<? extends FeedItem> candidates,
