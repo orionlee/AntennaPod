@@ -29,12 +29,13 @@ public class APDownloadAlgorithmRandomDownloadTest {
     private final FeedItem i3_31 = itemWithId(f3, 31);
     private final List<FeedItem> i3_all;
     private final FeedItem i4_41 = itemWithId(f4, 41);
+    private final FeedItem i4_42 = itemWithId(f4, 42);
 
     // queue's items are all auto-downloaded
     private final List<FeedItem> queueNoNonAutoDl = Arrays.asList(i1_11, i2_21, i1_12);
 
     // queue has some items that are not auto-downloaded
-    private final List<FeedItem> queueWithNonAutoDl = Arrays.asList(i1_11, i3_31, i2_21);
+    private final List<FeedItem> queueWithNonAutoDl = Arrays.asList(i1_11, i3_31, i2_21, i4_42);
 
     private final List<FeedItem> nonAutoDlItems;
 

@@ -132,7 +132,7 @@ public class APDownloadAlgorithm implements AutomaticDownloadAlgorithm {
     }
 
     private static final int NUM_RECENT_ITEMS_TO_CONSIDER_IN_RANDOM_DL = 20;
-    private static final int THRESHOLD_NUM_NON_AUTO_DL_ITEMS_IN_QUEUE_FOR_RANDOM  = 1;
+    private static final int THRESHOLD_NUM_NON_AUTO_DL_ITEMS_IN_QUEUE_FOR_RANDOM  = 2;
 
     @VisibleForTesting
     static List<? extends FeedItem> getSomeRandomNonAutoDownloadEpisodes(List<? extends FeedItem> nonAutoDlItems,
