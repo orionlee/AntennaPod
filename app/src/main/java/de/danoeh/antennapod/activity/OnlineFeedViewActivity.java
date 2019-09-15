@@ -32,7 +32,6 @@ import android.widget.TextView;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
 
-import de.danoeh.antennapod.core.glide.FastBlurTransformation;
 import org.apache.commons.lang3.StringUtils;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -55,6 +54,7 @@ import de.danoeh.antennapod.core.feed.Feed;
 import de.danoeh.antennapod.core.feed.FeedItem;
 import de.danoeh.antennapod.core.feed.FeedPreferences;
 import de.danoeh.antennapod.core.glide.ApGlideSettings;
+import de.danoeh.antennapod.core.glide.FastBlurTransformation;
 import de.danoeh.antennapod.core.preferences.UserPreferences;
 import de.danoeh.antennapod.core.service.download.DownloadRequest;
 import de.danoeh.antennapod.core.service.download.DownloadStatus;
@@ -515,6 +515,9 @@ public class OnlineFeedViewActivity extends AppCompatActivity {
             } else if (feedInFeedlist(feed)) {
                 subscribeButton.setEnabled(true);
                 subscribeButton.setText(R.string.open_podcast);
+                if (true) { // TODO-1077: changed to check if feed is marked as serial
+                    showFeedIsSerialDialog();
+                }
             } else {
                 subscribeButton.setEnabled(true);
                 subscribeButton.setText(R.string.subscribe_label);
@@ -544,6 +547,15 @@ public class OnlineFeedViewActivity extends AppCompatActivity {
             }
         }
         return 0;
+    }
+
+    private void showFeedIsSerialDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Podcast is serial") // TODO-1077: i18n
+                .setMessage("Oldest episodes will be downloaded first.\n\nOpen Podcast Settings to adjust it.")
+                .setNeutralButton("Podcast Settings", null)
+                .setPositiveButton("Ok", null)
+                .show();
     }
 
     @UiThread
