@@ -5,6 +5,9 @@ import android.database.Cursor;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import de.danoeh.antennapod.core.preferences.UserPreferences;
 import de.danoeh.antennapod.core.storage.DBWriter;
 import de.danoeh.antennapod.core.storage.PodDBAdapter;
@@ -29,11 +32,19 @@ public class FeedPreferences {
     private String username;
     private String password;
 
-    public FeedPreferences(long feedID, boolean autoDownload, AutoDeleteAction auto_delete_action, String username, String password) {
-        this(feedID, autoDownload, true, auto_delete_action, username, password, new FeedFilter());
+    public enum FeedType {
+        EPISODIC,
+        SERIAL
     }
 
-    private FeedPreferences(long feedID, boolean autoDownload, boolean keepUpdated, AutoDeleteAction auto_delete_action, String username, String password, @NonNull FeedFilter filter) {
+    @NonNull
+    private FeedType type;
+
+    public FeedPreferences(long feedID, boolean autoDownload, AutoDeleteAction auto_delete_action, String username, String password) {
+        this(feedID, autoDownload, true, auto_delete_action, username, password, new FeedFilter(), FeedType.EPISODIC);
+    }
+
+    private FeedPreferences(long feedID, boolean autoDownload, boolean keepUpdated, AutoDeleteAction auto_delete_action, String username, String password, @NonNull FeedFilter filter, @NonNull FeedType type) {
         this.feedID = feedID;
         this.autoDownload = autoDownload;
         this.keepUpdated = keepUpdated;
@@ -41,6 +52,7 @@ public class FeedPreferences {
         this.username = username;
         this.password = password;
         this.filter = filter;
+        this.type = type;
     }
 
     public static FeedPreferences fromCursor(Cursor cursor) {
@@ -62,7 +74,8 @@ public class FeedPreferences {
         String password = cursor.getString(indexPassword);
         String includeFilter = cursor.getString(indexIncludeFilter);
         String excludeFilter = cursor.getString(indexExcludeFilter);
-        return new FeedPreferences(feedId, autoDownload, autoRefresh, autoDeleteAction, username, password, new FeedFilter(includeFilter, excludeFilter));
+        FeedType type = stubFeedTypeStorage.get(PodDBAdapter.getContext(), feedId); // TODO-1077: use db backend eventually
+        return new FeedPreferences(feedId, autoDownload, autoRefresh, autoDeleteAction, username, password, new FeedFilter(includeFilter, excludeFilter), type);
     }
 
     /**
@@ -174,5 +187,27 @@ public class FeedPreferences {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    @NonNull public FeedType getType() {
+        return type;
+    }
+
+    public void setType(@NonNull FeedType type) {
+        this.type = type;
+    }
+
+    public static final StubFeedTypeStorage stubFeedTypeStorage = new StubFeedTypeStorage();
+    public static class StubFeedTypeStorage { // TODO-1077: temporary stub storage for FeedType (no db changes for now)
+        private Map<Long, FeedType> map = new HashMap<>();
+
+        public @NonNull FeedType get(@NonNull Context context, long feedId) {
+            FeedType result = map.get(feedId);
+            return result != null ? result : FeedType.EPISODIC;
+        }
+
+        public void put(@NonNull Context context, long feedId, @NonNull FeedType type) {
+            map.put(feedId, type);
+        }
     }
 }

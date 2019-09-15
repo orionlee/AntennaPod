@@ -7,11 +7,13 @@ import android.os.Bundle;
 import android.support.v14.preference.SwitchPreference;
 import android.support.v7.preference.ListPreference;
 import android.support.v7.preference.PreferenceFragmentCompat;
+
 import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.core.dialog.ConfirmationDialog;
 import de.danoeh.antennapod.core.feed.Feed;
 import de.danoeh.antennapod.core.feed.FeedFilter;
 import de.danoeh.antennapod.core.feed.FeedPreferences;
+import de.danoeh.antennapod.core.feed.FeedPreferences.FeedType;
 import de.danoeh.antennapod.core.preferences.UserPreferences;
 import de.danoeh.antennapod.core.storage.DBWriter;
 import de.danoeh.antennapod.dialog.AuthenticationDialog;
@@ -40,6 +42,7 @@ public class FeedSettingsFragment extends PreferenceFragmentCompat {
                     setupAutoDeletePreference();
                     setupAuthentificationPreference();
                     setupEpisodeFilterPreference();
+                    setupFeedTypePreference();
 
                     updateAutoDeleteSummary();
                     updateAutoDownloadEnabled();
@@ -121,6 +124,19 @@ public class FeedSettingsFragment extends PreferenceFragmentCompat {
         pref.setOnPreferenceChangeListener((preference, newValue) -> {
             boolean checked = newValue == Boolean.TRUE;
             feedPreferences.setKeepUpdated(checked);
+            feed.savePreferences();
+            pref.setChecked(checked);
+            return false;
+        });
+    }
+
+    private void setupFeedTypePreference() {
+        SwitchPreference pref = (SwitchPreference) findPreference("serialFeed");
+
+        pref.setChecked(feedPreferences.getType().equals(FeedType.SERIAL));
+        pref.setOnPreferenceChangeListener((preference, newValue) -> {
+            boolean checked = newValue == Boolean.TRUE;
+            feedPreferences.setType(checked ? FeedType.SERIAL : FeedType.EPISODIC);
             feed.savePreferences();
             pref.setChecked(checked);
             return false;

@@ -12,14 +12,13 @@ import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDatabase.CursorFactory;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.media.MediaMetadataRetriever;
 import android.os.Build;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.text.TextUtils;
 import android.util.Log;
 
 import org.apache.commons.io.FileUtils;
+import org.greenrobot.eventbus.EventBus;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,7 +37,6 @@ import de.danoeh.antennapod.core.feed.FeedPreferences;
 import de.danoeh.antennapod.core.preferences.UserPreferences;
 import de.danoeh.antennapod.core.service.download.DownloadStatus;
 import de.danoeh.antennapod.core.util.LongIntMap;
-import org.greenrobot.eventbus.EventBus;
 
 // TODO Remove media column from feeditem table
 
@@ -409,7 +407,11 @@ public class PodDBAdapter {
         values.put(KEY_INCLUDE_FILTER, prefs.getFilter().getIncludeFilter());
         values.put(KEY_EXCLUDE_FILTER, prefs.getFilter().getExcludeFilter());
         db.update(TABLE_NAME_FEEDS, values, KEY_ID + "=?", new String[]{String.valueOf(prefs.getFeedID())});
+        FeedPreferences.stubFeedTypeStorage.put(context, prefs.getFeedID(), prefs.getType()); // TODO-1077: use db backend eventually
     }
+
+    @NonNull
+    public static Context getContext() { return context; } // TODO-1077: for use of temporary non-db backend in FeedPreferences
 
     public void setFeedItemFilter(long feedId, Set<String> filterValues) {
         String valuesList = TextUtils.join(",", filterValues);
