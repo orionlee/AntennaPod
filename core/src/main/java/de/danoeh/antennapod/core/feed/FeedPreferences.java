@@ -1,12 +1,10 @@
 package de.danoeh.antennapod.core.feed;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
-
-import java.util.HashMap;
-import java.util.Map;
 
 import de.danoeh.antennapod.core.preferences.UserPreferences;
 import de.danoeh.antennapod.core.storage.DBWriter;
@@ -199,15 +197,25 @@ public class FeedPreferences {
 
     public static final StubFeedTypeStorage stubFeedTypeStorage = new StubFeedTypeStorage();
     public static class StubFeedTypeStorage { // TODO-1077: temporary stub storage for FeedType (no db changes for now)
-        private Map<Long, FeedType> map = new HashMap<>();
-
         public @NonNull FeedType get(@NonNull Context context, long feedId) {
-            FeedType result = map.get(feedId);
-            return result != null ? result : FeedType.EPISODIC;
+            String typeStr = prefs(context).getString(key(feedId), FeedType.EPISODIC.name());
+            return FeedType.valueOf(typeStr);
         }
 
         public void put(@NonNull Context context, long feedId, @NonNull FeedType type) {
-            map.put(feedId, type);
+            prefs(context).edit()
+                    .putString(key(feedId), type.name())
+                    .apply();
         }
+
+        @NonNull
+        private static SharedPreferences prefs(@NonNull Context context) {
+            return context.getSharedPreferences("StubFeedTypeStorage", Context.MODE_PRIVATE);
+        }
+
+        private static String key(long feedId) {
+            return Long.toString(feedId, 10);
+        }
+
     }
 }
