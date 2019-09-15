@@ -7,6 +7,11 @@
             android:title="@string/keep_updated"
             android:summary="@string/keep_updated_summary"/>
 
+    <SwitchPreference
+        android:key="serialFeed"
+        android:title="Serial"
+        android:summary="The oldest episodes will be downloaded first."/> <!-- TODO-1077: i18n -->
+
     <Preference
             android:key="authentication"
             android:title="@string/authentication_label"
