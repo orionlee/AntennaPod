@@ -12,6 +12,7 @@ import de.danoeh.antennapod.core.feed.FeedItemMother;
 import de.danoeh.antennapod.core.feed.FeedMother;
 import de.danoeh.antennapod.core.feed.FeedPreferences;
 
+import static de.danoeh.antennapod.core.storage.APDownloadAlgorithm.getSomeRandomNonAutoDownloadEpisodes;
 import static java.util.Collections.EMPTY_LIST;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -34,8 +35,11 @@ public class APDownloadAlgorithmRandomDownloadTest {
     // queue's items are all auto-downloaded
     private final List<FeedItem> queueNoNonAutoDl = Arrays.asList(i1_11, i2_21, i1_12);
 
-    // queue has some items that are not auto-downloaded
-    private final List<FeedItem> queueWithNonAutoDl = Arrays.asList(i1_11, i3_31, i2_21, i4_42);
+    // queue has items that are not auto-downloaded (using up the quota)
+    private final List<FeedItem> queueFullNonAutoDl = Arrays.asList(i1_11, i3_31, i2_21, i4_42);
+
+    // queue has items that are not auto-downloaded (but not using up the quota)
+    private final List<FeedItem> queueOneNonAutoDl = Arrays.asList(i1_11, i2_21, i1_12, i4_41);
 
     private final List<FeedItem> nonAutoDlItems;
 
@@ -57,11 +61,27 @@ public class APDownloadAlgorithmRandomDownloadTest {
 
 
     @Test
-    public void getSomeRandomNonAutoDownloadEpisodes_QueueWithNonAutoDl() {
+    public void getSomeRandomNonAutoDownloadEpisodes_QueueFullNonAutoDl() {
         List<? extends FeedItem> actual =
-                APDownloadAlgorithm.getSomeRandomNonAutoDownloadEpisodes(nonAutoDlItems, queueWithNonAutoDl);
-        assertEquals("Queue has some non auto download items - No more is needed.",
+                getSomeRandomNonAutoDownloadEpisodes(nonAutoDlItems, 1, queueFullNonAutoDl);
+        assertEquals("Queue has enough non auto download items - No more is needed.",
                 EMPTY_LIST, actual);
+    }
+
+    @Test
+    public void getSomeRandomNonAutoDownloadEpisodes_EpisodeCacheFull_QueueOneNonAutoDl() {
+        List<? extends FeedItem> actual =
+                getSomeRandomNonAutoDownloadEpisodes(nonAutoDlItems, 0, queueOneNonAutoDl);
+        assertEquals("Episode Cache full; queue has some non auto download items - No more is needed.",
+                EMPTY_LIST, actual);
+    }
+
+    @Test
+    public void getSomeRandomNonAutoDownloadEpisodes_EpisodeCacheFull_QueueNoNonAutoDl() {
+        List<? extends FeedItem> actual =
+                getSomeRandomNonAutoDownloadEpisodes(nonAutoDlItems, 0, queueNoNonAutoDl);
+        assertEquals("Episode Cache full; queue has no non auto download items - 1 will be snuck in.",
+                1, actual.size());
     }
 
     @Test
@@ -70,7 +90,7 @@ public class APDownloadAlgorithmRandomDownloadTest {
 
         for(int i = 0; i < 10; i++) { // run multiple time for randomness test below
             List<? extends FeedItem> actual =
-                    APDownloadAlgorithm.getSomeRandomNonAutoDownloadEpisodes(nonAutoDlItems, queueNoNonAutoDl);
+                    getSomeRandomNonAutoDownloadEpisodes(nonAutoDlItems, 2, queueNoNonAutoDl);
             assertEquals("Queue has only auto download items - Get 1 random.",
                     1, actual.size());
             assertTrue("Queue has only auto download items - The result comes from non auto download item list.",
@@ -87,7 +107,7 @@ public class APDownloadAlgorithmRandomDownloadTest {
     @Test
     public void getSomeRandomNonAutoDownloadEpisodes_EmptyNonAutoDlItems() {
         List<? extends FeedItem> actual =
-                APDownloadAlgorithm.getSomeRandomNonAutoDownloadEpisodes(EMPTY_LIST, queueNoNonAutoDl);
+                getSomeRandomNonAutoDownloadEpisodes(EMPTY_LIST, 2, queueNoNonAutoDl);
         assertEquals("No non auto download items available - result should be empty.",
                 EMPTY_LIST, actual);
     }

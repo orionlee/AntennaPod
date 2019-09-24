@@ -105,7 +105,9 @@ public class APDownloadAlgorithm implements AutomaticDownloadAlgorithm {
                     e.printStackTrace();
                 }
 
-                downloadSomeRandomNonAutoDownloadEpisodes(context, nonAutoDlItems, queue);
+                int episodeSpaceLeftForRandom = episodeSpaceLeft - itemsToDownload.size();
+                downloadSomeRandomNonAutoDownloadEpisodes(context,
+                        nonAutoDlItems, episodeCacheSize, queue);
 
             }
         };
@@ -113,10 +115,12 @@ public class APDownloadAlgorithm implements AutomaticDownloadAlgorithm {
 
     private static void downloadSomeRandomNonAutoDownloadEpisodes(Context context,
                                                                   List<? extends FeedItem> nonAutoDlItems,
+                                                                  int episodeSpaceLeft,
                                                                   List<? extends FeedItem> queue) {
-        Log.d(TAG, "downloadSomeRandomNonAutoDownloadEpisodes() called: #nonAutoDlItems = [" + nonAutoDlItems.size() + "], #queue = [" + queue.size() + "]");
+        Log.d(TAG, "downloadSomeRandomNonAutoDownloadEpisodes() called: #nonAutoDlItems = [" + nonAutoDlItems.size() + "]"
+                + ", episodeSpaceLeft: " + episodeSpaceLeft +", #queue = [" + queue.size() + "]");
         List<? extends FeedItem> itemsToDownload =
-                getSomeRandomNonAutoDownloadEpisodes(nonAutoDlItems, queue);
+                getSomeRandomNonAutoDownloadEpisodes(nonAutoDlItems, episodeSpaceLeft, queue);
         if (itemsToDownload.isEmpty()) {
             return;
         }
@@ -136,11 +140,25 @@ public class APDownloadAlgorithm implements AutomaticDownloadAlgorithm {
 
     @VisibleForTesting
     static List<? extends FeedItem> getSomeRandomNonAutoDownloadEpisodes(List<? extends FeedItem> nonAutoDlItems,
+                                                                         int episodeSpaceLeft,
                                                                          List<? extends FeedItem> queue) {
-        if (countNonAutoDownloadEpisodes(queue) >= THRESHOLD_NUM_NON_AUTO_DL_ITEMS_IN_QUEUE_FOR_RANDOM
+        final int numNonAudoDlItemsInQueue = countNonAutoDownloadEpisodes(queue);
+
+        if (numNonAudoDlItemsInQueue >= THRESHOLD_NUM_NON_AUTO_DL_ITEMS_IN_QUEUE_FOR_RANDOM
                 || nonAutoDlItems.isEmpty()) {
             return Collections.EMPTY_LIST;
         }
+
+        // case there is no space left, and there are already some non-autodownload items in queue
+        // also do nothing
+        if (episodeSpaceLeft <= 0 && numNonAudoDlItemsInQueue > 0) {
+            return Collections.EMPTY_LIST;
+        }
+
+        // cases
+        // 1. there is space left in episode cache, OR
+        // 2. there is no space left (and the queue is full of autodownload items), we still
+        //    sneak in one random non-autodownload items (it breaks episode cache limit)
 
         int idxToGet = (int)Math.floor(Math.random() * NUM_RECENT_ITEMS_TO_CONSIDER_IN_RANDOM_DL);
 
