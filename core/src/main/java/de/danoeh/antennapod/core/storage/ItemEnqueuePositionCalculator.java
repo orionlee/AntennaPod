@@ -38,8 +38,8 @@ class ItemEnqueuePositionCalculator {
         }
     }
 
-    private final @NonNull
-    Options options;
+    @NonNull
+    private final Options options;
 
     @VisibleForTesting
     DownloadStateProvider downloadStateProvider = DownloadRequester.getInstance();
