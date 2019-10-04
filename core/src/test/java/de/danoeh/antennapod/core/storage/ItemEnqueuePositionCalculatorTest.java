@@ -186,7 +186,7 @@ public class ItemEnqueuePositionCalculatorTest {
             //
             ItemEnqueuePositionCalculator calculator = new ItemEnqueuePositionCalculator(options);
             MockDownloadRequester mockDownloadRequester = new MockDownloadRequester();
-            calculator.requester = mockDownloadRequester;
+            calculator.downloadStateProvider = mockDownloadRequester;
 
             // Setup initial data
             // A shallow copy, as the test code will manipulate the queue
