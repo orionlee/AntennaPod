@@ -1,9 +1,10 @@
 package de.danoeh.antennapod.core.storage;
 
 import android.content.Context;
-import android.support.annotation.VisibleForTesting;
-import android.support.v4.util.ArrayMap;
 import android.util.Log;
+
+import androidx.annotation.VisibleForTesting;
+import androidx.collection.ArrayMap;
 
 import java.util.ArrayList;
 import java.util.Collections;
