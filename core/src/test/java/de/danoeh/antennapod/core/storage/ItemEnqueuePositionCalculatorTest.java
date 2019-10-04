@@ -236,7 +236,7 @@ public class ItemEnqueuePositionCalculatorTest {
             return item;
         }
 
-        private static class MockDownloadRequester implements FeedFileDownloadStatusRequesterInterface {
+        private static class MockDownloadRequester implements DownloadStateProvider {
 
             private Map<Long, Boolean> downloadingByIds = new HashMap<>();
 
