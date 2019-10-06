@@ -2,8 +2,9 @@ package de.danoeh.antennapod.core.storage;
 
 import android.app.backup.BackupManager;
 import android.content.Context;
-import androidx.annotation.NonNull;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
 
 import org.greenrobot.eventbus.EventBus;
 
@@ -321,21 +322,23 @@ public class DBWriter {
                     LongList markAsUnplayedIds = new LongList();
                     List<QueueEvent> events = new ArrayList<>();
                     List<FeedItem> updatedItems = new ArrayList<>();
+                    ItemEnqueuePositionCalculator positionCalculator =
+                            new ItemEnqueuePositionCalculator(
+                                    new ItemEnqueuePositionCalculator.Options()
+                                            .setEnqueueAtFront(UserPreferences.enqueueAtFront())
+                                            .setKeepInProgressAtFront(UserPreferences.keepInProgressAtFront())
+                            );
+
                     for (int i = 0; i < itemIds.length; i++) {
                         if (!itemListContains(queue, itemIds[i])) {
                             final FeedItem item = DBReader.getFeedItem(itemIds[i]);
 
 
                             if (item != null) {
-                                // add item to either front ot back of queue
-                                boolean addToFront = UserPreferences.enqueueAtFront();
-                                if (addToFront) {
-                                    queue.add(i, item);
-                                    events.add(QueueEvent.added(item, i));
-                                } else {
-                                    queue.add(item);
-                                    events.add(QueueEvent.added(item, queue.size() - 1));
-                                }
+                                int insertPosition = positionCalculator.calcPosition(i, item, queue);
+                                queue.add(insertPosition, item);
+                                events.add(QueueEvent.added(item, insertPosition));
+
                                 item.addTag(FeedItem.TAG_QUEUE);
                                 updatedItems.add(item);
                                 queueModified = true;
@@ -524,7 +527,7 @@ public class DBWriter {
             int index = queueIdList.indexOf(itemId);
             if (index >= 0) {
                 moveQueueItemHelper(index, queueIdList.size() - 1,
-                    broadcastUpdate);
+                        broadcastUpdate);
             } else {
                 Log.e(TAG, "moveQueueItemToBottom: item not found");
             }
