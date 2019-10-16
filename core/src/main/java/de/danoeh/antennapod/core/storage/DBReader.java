@@ -1,11 +1,14 @@
 package de.danoeh.antennapod.core.storage;
 
 import android.database.Cursor;
+import android.text.TextUtils;
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.collection.ArrayMap;
-import android.text.TextUtils;
-import android.util.Log;
+import androidx.collection.ArraySet;
+import androidx.core.util.Pair;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,12 +16,14 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import de.danoeh.antennapod.core.feed.Chapter;
 import de.danoeh.antennapod.core.feed.Feed;
 import de.danoeh.antennapod.core.feed.FeedItem;
 import de.danoeh.antennapod.core.feed.FeedMedia;
 import de.danoeh.antennapod.core.feed.FeedPreferences;
+import de.danoeh.antennapod.core.feed.FeedPreferences.SemanticType;
 import de.danoeh.antennapod.core.preferences.UserPreferences;
 import de.danoeh.antennapod.core.service.download.DownloadStatus;
 import de.danoeh.antennapod.core.util.LongIntMap;
@@ -480,6 +485,48 @@ public final class DBReader {
         }
     }
 
+    @Nullable
+    public static FeedItem getLatestSerialPlaybackItem() {
+        Log.d(TAG, "getLatestSerialPlaybackItem() called");
+        final long tStart = System.currentTimeMillis();
+
+        FeedItem result = null;
+
+        PodDBAdapter adapter = PodDBAdapter.getInstance();
+        adapter.open();
+
+        Set<Long> episodicFeedIdsSeen = new ArraySet<>();
+        Cursor itemIdFeedIdCursor = null;
+        try {
+            itemIdFeedIdCursor = adapter.getItemIdFeedIdCursorByLastPlayedDescending();
+            while(itemIdFeedIdCursor.moveToNext()) {
+                long itemId = itemIdFeedIdCursor.getLong(0);
+                long feedId = itemIdFeedIdCursor.getLong(1);
+
+                if (episodicFeedIdsSeen.contains(feedId)) {
+                    continue; // already know it is an episodic one, ignore it.
+                }
+                Feed feed = getFeed(feedId, adapter);
+                if (SemanticType.SERIAL == feed.getPreferences().getSemanticType()) {
+                    result = getFeedItem(itemId, adapter);
+                    break;
+                } else {
+                    episodicFeedIdsSeen.add(feedId);
+                }
+            }
+        } finally {
+            if (itemIdFeedIdCursor != null) {
+                itemIdFeedIdCursor.close();
+            }
+            adapter.close();
+        }
+
+        final long tEnd= System.currentTimeMillis();
+        Log.v(TAG, "getLatestSerialPlaybackItem() - elapsed time: " + (tEnd - tStart));
+
+        return result;
+    }
+
     /**
      * Loads the download log from the database.
      *
@@ -857,6 +904,26 @@ public final class DBReader {
         }
     }
 
+    /**
+     * Return the ratio of the number of episodic feeds to serial feeds
+     */
+    public static Pair<Integer, Integer> getFeedEpisodicToSerialRatio() {
+        int numEpisodic = 0;
+        int numSerial = 0;
+        for (Feed feed : getFeedList()) {
+            FeedPreferences fPrefs = feed.getPreferences();
+            if (!fPrefs.getAutoDownload() || !fPrefs.getKeepUpdated()) {
+                continue;
+            }
+            if (SemanticType.SERIAL == fPrefs.getSemanticType()) {
+                numSerial++;
+            } else {
+                numEpisodic++;
+            }
+        }
+        return new Pair<>(numEpisodic, numSerial);
+    }
+    
     /**
      * Searches the DB for statistics
      *
