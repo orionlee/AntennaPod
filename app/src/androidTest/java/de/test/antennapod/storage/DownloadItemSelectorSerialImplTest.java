@@ -29,6 +29,8 @@ import static de.test.antennapod.storage.DownloadItemSelectorTestUtil.KEEP_UPDAT
 import static de.test.antennapod.storage.DownloadItemSelectorTestUtil.KEEP_UPDATED_TRUE;
 import static de.test.antennapod.storage.DownloadItemSelectorTestUtil.cFI;
 import static de.test.antennapod.storage.DownloadItemSelectorTestUtil.createFeed;
+import static de.test.antennapod.storage.FeedTestUtil.HAS_MEIDA;
+import static de.test.antennapod.storage.FeedTestUtil.NO_MEDIA;
 import static de.test.antennapod.storage.FeedTestUtil.saveFeeds;
 import static de.test.antennapod.storage.FeedTestUtil.toIds;
 import static org.junit.Assert.assertEquals;
@@ -140,24 +142,24 @@ public class DownloadItemSelectorSerialImplTest {
                 cFI(NEW) // the one to be picked, new flag
         );
         Feed f4 = createFeed(4, SERIAL, AUTO_DL_TRUE, "", KEEP_UPDATED_TRUE,
-                cFI(UNPLAYED), cFI(UNPLAYED), cFI(UNPLAYED));
+                cFI(UNPLAYED),
+                cFI(PLAYED), // marked as played, but not really played
+                cFI(UNPLAYED) // next to download should be this one, after the marked as played
+        );
         Feed f5 = createFeed(5, EPISODIC, AUTO_DL_TRUE, "", KEEP_UPDATED_TRUE,
                 cFI(PLAYED), cFI(PLAYED)); // played time to be set later
         Feed f6 = createFeed(6, EPISODIC, AUTO_DL_TRUE, "", KEEP_UPDATED_TRUE,
                 cFI(UNPLAYED)); // in-progress, to be set later
         FeedsAccessor a = saveFeeds(f0, f1, f2, f3, f4, f5, f6);
         { // mark fi(1,0) as downloaded, so the feed will be pushed to the end
-            FeedMedia fmDownloaded =  a.fi(1, 0).getMedia();
-            fmDownloaded.setFile_url("file://downloaded.mp3"); // MUST set, or setDownloaded will be useless
-            fmDownloaded.setDownloaded(true);
-            DBWriter.setFeedMedia(fmDownloaded).get();
+            setDownloaded(a.fi(1,0));
         }
         { // ensure fi(3,2) is the ongoing one (with the most recent played timestamp)
             // also set the last playback time for some media to be more realistic
             setLastPlaybackTimeDescending(a.fi(5,1), a.fi(6,0), a.fi(5,0), a.fi(3,2), a.fi(0,0));
         }
 
-        List<Long> expected = toIds(a.fi(4, 0), a.fi(2, 0), a.fi(3, 3), a.fi(1,1));
+        List<Long> expected = toIds(a.fi(4, 2), a.fi(2, 0), a.fi(3, 3), a.fi(1,1));
 
         // Run actual test
 
@@ -185,6 +187,11 @@ public class DownloadItemSelectorSerialImplTest {
             assertEquals("getNextItemToDownloadForSerial() - skip downloaded",
                     a.fi(1,1), nextToDownload);
         }
+        {
+            FeedItem nextToDownload = selector.getNextItemToDownloadForSerial(f4);
+            assertEquals("getNextItemToDownloadForSerial() - the one after the marked as played one",
+                    a.fi(4,2), nextToDownload);
+        }
 
         // Test overall
         List<? extends FeedItem> fiActual = selector.getAutoDownloadableEpisodes();
@@ -211,6 +218,44 @@ public class DownloadItemSelectorSerialImplTest {
         DownloadItemSelectorSerialImpl selector = new DownloadItemSelectorSerialImpl();
         List<? extends FeedItem> fiActual = selector.getAutoDownloadableEpisodes();
         assertEquals("Boundary, ignore non-autodownloadable feeds -  It returns: " + fiActual,
+                expected, toIds(fiActual));
+    }
+
+    @Test
+    public void boundary_ignoreItemsWithNoMedia() throws Exception {
+        // Setup test data
+        Feed f0 = createFeed(0, SERIAL, AUTO_DL_TRUE, "", KEEP_UPDATED_TRUE,
+                cFI(UNPLAYED, NO_MEDIA), cFI(UNPLAYED, HAS_MEIDA));
+        FeedsAccessor a = saveFeeds(f0);
+
+        List<Long> expected = toIds(a.fi(0, 1));
+
+        // Now create the selector under test and exercise it
+        DownloadItemSelectorSerialImpl selector = new DownloadItemSelectorSerialImpl();
+        List<? extends FeedItem> fiActual = selector.getAutoDownloadableEpisodes();
+        assertEquals("Boundary, ignore items with no media -  It returns: " + fiActual,
+                expected, toIds(fiActual));
+    }
+
+    @Test
+    public void boundary_ignoreNonAutoDownloadableItems() throws Exception {
+        // Setup test data
+        Feed f0 = createFeed(0, SERIAL, AUTO_DL_TRUE, "", KEEP_UPDATED_TRUE,
+                cFI(UNPLAYED), // to be individually set as non autodownloadable
+                cFI(UNPLAYED));
+        FeedsAccessor a = saveFeeds(f0);
+        { // make fi(0,0) to be not autodownloadable
+            FeedItem item = a.fi(0,0);
+            item.setAutoDownload(false);
+            DBWriter.setFeedItem(item).get();
+        }
+
+        List<Long> expected = toIds(a.fi(0, 1));
+
+        // Now create the selector under test and exercise it
+        DownloadItemSelectorSerialImpl selector = new DownloadItemSelectorSerialImpl();
+        List<? extends FeedItem> fiActual = selector.getAutoDownloadableEpisodes();
+        assertEquals("Boundary, ignore items not autodownloadable -  It returns: " + fiActual,
                 expected, toIds(fiActual));
     }
 
@@ -255,13 +300,22 @@ public class DownloadItemSelectorSerialImplTest {
     private void setLastPlaybackTimeDescending(FeedItem... feedItems) throws Exception {
         final long lastPlaybackTimeBase = System.currentTimeMillis() + 1000 * feedItems.length;
 
-        for (int i =0; i < feedItems.length; i++) {
+        for (int i = 0; i < feedItems.length; i++) {
             FeedItem item = feedItems[i];
             FeedMedia media = item.getMedia();
             media.setLastPlayedTime(lastPlaybackTimeBase - i * 1000);
             if (item.isPlayed()) {
                 media.setPlaybackCompletionDate(new Date(lastPlaybackTimeBase - i * 1000));
             }
+            DBWriter.setFeedMedia(media).get();
+        }
+    }
+
+    private void setDownloaded(FeedItem... feedItems) throws Exception {
+        for (FeedItem feedItem : feedItems) {
+            FeedMedia media = feedItem.getMedia();
+            media.setFile_url("file://downloaded.mp3"); // MUST set, or setDownloaded will be useless
+            media.setDownloaded(true);
             DBWriter.setFeedMedia(media).get();
         }
     }
