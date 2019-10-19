@@ -19,7 +19,7 @@ android {
         // "1.2.3-RC4"      -> 1020304
         // "1.2.3"          -> 1020395
         versionCode 1070396
-        versionName "1.7.3b"
+        versionName "1.7.3b-serial1"
         testApplicationId "de.test.antennapod"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         generatedDensities = []
@@ -79,7 +79,8 @@ android {
             }
         }
         release {
-            resValue "string", "provider_authority", "de.danoeh.antennapod.provider"
+            applicationIdSuffix ".devSerial" // Custom release build for trying out serial podcast autodownload (#1077)
+            resValue "string", "provider_authority", "de.danoeh.antennapod.devSerial.provider"
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), "proguard.cfg"
             signingConfig signingConfigs.releaseConfig
